@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <script type="text/javascript" src="H-ui/lib/jquery/1.9.1/jquery.min.js"></script>
+    <script type="text/javascript" src="H-ui/static/h-ui/js/H-ui.js"></script>
+    <script type="text/javascript" src="cookie.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="H-ui/static/h-ui/css/H-ui.min.css"/>
+    <link rel="stylesheet" type="text/css" href="index.css"/>
+
+    <title>我的主页</title>
+</head>
+
+<style>
+    body {
+        text-align: center
+    }
+
+    .clearfix:after {
+        content: "\20";
+        display: block;
+        height: 0;
+        clear: both;
+        visibility: hidden
+    }
+
+    .clearfix {
+        zoom: 1
+    }
+
+    .tabBar {
+        border-bottom: 2px solid #eee
+    }
+
+    .tabBar span {
+        background-color: #e8e8e8;
+        cursor: pointer;
+        display: inline-block;
+        float: left;
+        font-weight: bold;
+        height: 40px;
+        width: 120px;
+        line-height: 40px;
+        padding: 0 15px;
+        font-size: 16px;
+        color: #222222;
+    }
+
+    .tabBar span.current {
+        background-color: #7883ff;
+        color: #fff
+    }
+
+    .tabCon {
+        display: none
+    }
+</style>
+
+<div class="topnav">
+    <div class="wp cl">
+        <div class="l" id="nav_left"></div>
+        <div class="r" id="nav_right"></div>
+    </div>
+</div>
+
+<body>
+<div style="width: 80%;margin: 0 auto">
+    <div style="margin: 0 auto;font-size: 16px;text-align: left">
+        <p id="organize_name"></p>
+        <p id="player_name"></p>
+    </div>
+    <div style="margin: 0 auto">
+        <div id="tab_demo" class="HuiTab">
+            <div class="tabBar clearfix "><span>我的记录</span><span>单项最好记录</span><span>账号管理</span></div>
+            <div class="tabCon">
+                <table id="myScore" class="table table-border table-bg table-bordered table-striped table-hover">
+                    <thead>
+                    <tr>
+                        <th>项目</th>
+                        <th>组别</th>
+                        <th>性别</th>
+                        <th>赛别</th>
+                        <th>分组</th>
+                        <th>名次</th>
+                        <th>成绩</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                </table>
+            </div>
+            <div class="tabCon">
+                <table id="myBestScore" class="table table-border table-bg table-bordered table-striped table-hover">
+                    <thead>
+                    <tr>
+                        <th>项目</th>
+                        <th>组别</th>
+                        <th>性别</th>
+                        <th>赛别</th>
+                        <th>分组</th>
+                        <th>名次</th>
+                        <th>成绩</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+
+<script>
+    jQuery.Huitab = function (tabBar, tabCon, class_name, tabEvent, i) {
+        var $tab_menu = $(tabBar);
+        // 初始化操作
+        $tab_menu.removeClass(class_name);
+        $(tabBar).eq(i).addClass(class_name);
+        $(tabCon).hide();
+        $(tabCon).eq(i).show();
+
+        $tab_menu.bind(tabEvent, function () {
+            $tab_menu.removeClass(class_name);
+            $(this).addClass(class_name);
+            var index = $tab_menu.index(this);
+            $(tabCon).hide();
+            $(tabCon).eq(index).show()
+        })
+    };
+
+    $(function () {
+        $.Huitab("#tab_demo .tabBar span", "#tab_demo .tabCon", "current", "click", "0")
+    });
+
+
+    HiAlert = function (string, time = 2000) {
+        $.Huimodalalert(string, time)
+    };
+    // #tab_demo 父级id
+    // #tab_demo .tabBar span 控制条
+    // #tab_demo .tabCon 内容区
+    // click 事件 点击切换，可以换成mousemove 移动鼠标切换
+    // 1	默认第2个tab为当前状态（从0开始）
+</script>
+
+<script>
+    function getPlayerScore() {
+        let id = cookie.get("player_id");
+        $.ajax({
+            url: "http://127.0.0.1:8000/v1/player/getPlayerScore/" + id,
+            method: "GET",
+            dataType: "json",
+            data: {
+                id: id,
+                token: cookie.get("player_token"),
+            },
+            success: function (evt, req, settings) {
+                let html = "";
+                if (req === "success") {
+                    if (evt['message']==="fail"){
+                        token_timeout();
+                    }
+                    for (let i = 0; i < evt['data'].length; i++) {
+                        html += "<tr>\n" +
+                            "        <td>" + evt['data'][i]['match_name'] + "</td>\n" +
+                            "        <td>" + evt['data'][i]['group_type'] + "</td>\n" +
+                            "        <td>" + evt['data'][i]['gender'] + "</td>\n" +
+                            "        <td>" + evt['data'][i]['match_type'] + "</td>\n" +
+                            "        <td>" + evt['data'][i]['s_group'] + "</td>\n" +
+                            "        <td>" + evt['data'][i]['no'] + "</td>\n" +
+                            "        <td>" + evt['data'][i]['time_score'] + "</td>\n" +
+                            "    </tr>\n";
+                    }
+                    if (evt['data'].length === 0) {
+                        html += "        <tr><td colspan='8' style='text-align: center'>暂无数据</td></tr>\n"
+                    }
+                    $("#myScore").append(html);
+                    $("#organize_name").html(evt['data'][0]['organize']);
+                    $("#player_name").html(evt['data'][0]['name']);
+                } else {
+                    HiAlert("ajax fail")
+                }
+            }
+        })
+    }
+
+    function getPlayerBestScore() {
+        let id = cookie.get("player_id");
+        $.ajax({
+            url: "http://127.0.0.1:8000/v1/player/getPlayerBestScore/" + id,
+            method: "GET",
+            dataType: "json",
+            data: {
+                id: id,
+                token: cookie.get("player_token"),
+            },
+            success: function (evt, req, settings) {
+                if (evt['message']==="fail"){
+                    token_timeout();
+                }
+                let matchName = ["500米", "1000米", "1500米", "4圈", "7圈"];
+                let html = "";
+                if (req === "success") {
+                    for (let i = 0; i < 5; i++) {
+                        if (evt[i] !== "filter") {
+                            html += "<tr>\n" +
+                                "        <td>" + evt[i]['match_name'] + "</td>\n" +
+                                "        <td>" + evt[i]['group_type'] + "</td>\n" +
+                                "        <td>" + evt[i]['gender'] + "</td>\n" +
+                                "        <td>" + evt[i]['match_type'] + "</td>\n" +
+                                "        <td>" + evt[i]['s_group'] + "</td>\n" +
+                                "        <td>" + evt[i]['no'] + "</td>\n" +
+                                "        <td>" + evt[i]['time_score'] + "</td>\n" +
+                                "    </tr>\n";
+                        } else {
+                            html += "<tr><td>" + matchName[i] + "</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>"
+                        }
+                    }
+                    $("#myBestScore").append(html)
+                } else {
+                    HiAlert("ajax fail")
+                }
+            }
+        })
+
+    }
+    checkCookie();
+    getPlayerScore();
+    getPlayerBestScore();
+</script>
+</html>

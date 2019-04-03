@@ -1,0 +1,419 @@
+
+table {
+    width: 100%;
+    empty-cells: show;
+    background-color: transparent;
+    border-collapse: collapse;
+    border-spacing: 0
+}
+
+table th {
+    text-align: left;
+    font-weight: 400
+}
+
+/*带水平线*/
+.table th {
+    font-weight: bold
+}
+
+.table th, .table td {
+    padding: 8px;
+    line-height: 20px
+}
+
+.table td {
+    text-align: left
+}
+
+.table tbody tr.success > td {
+    background-color: #dff0d8
+}
+
+.table tbody tr.error > td {
+    background-color: #f2dede
+}
+
+.table tbody tr.warning > td {
+    background-color: #fcf8e3
+}
+
+.table tbody tr.info > td {
+    background-color: #d9edf7
+}
+
+.table tbody + tbody {
+    border-top: 2px solid #ddd
+}
+
+.table .table {
+    background-color: #fff
+}
+
+/*带横向分割线*/
+.table-border {
+    border-top: 1px solid #ddd
+}
+
+.table-border th, .table-border td {
+    border-bottom: 1px solid #ddd
+}
+
+/*th带背景*/
+.table-bg thead th {
+    background-color: #F5FAFE
+}
+
+/*带外边框*/
+.table-bordered {
+    border: 1px solid #ddd;
+    border-collapse: separate;
+    *border-collapse: collapse;
+    border-left: 0
+}
+
+.table-bordered th, .table-bordered td {
+    border-left: 1px solid #ddd
+}
+
+.table-border.table-bordered {
+    border-bottom: 0
+}
+
+/*奇数行背景设为浅灰色*/
+.table-striped tbody > tr:nth-child(odd) > td, .table-striped tbody > tr:nth-child(odd) > th {
+    background-color: #F0F0FF
+}
+
+/*竖直方向padding缩减一半*/
+.table-condensed th, .table-condensed td {
+    padding: 4px 5px
+}
+
+/*鼠标悬停样式*/
+.table-hover tbody tr:hover td, .table-hover tbody tr:hover th {
+    background-color: #deffd5
+}
+
+/*定义颜色*/
+/*悬停在行*/
+.table tbody tr.active, .table tbody tr.active > td, .table tbody tr.active > th, .table tbody tr .active {
+    background-color: #F5F5F5 !important
+}
+
+/*成功或积极*/
+.table tbody tr.success, .table tbody tr.success > td, .table tbody tr.success > th, .table tbody tr .success {
+    background-color: #DFF0D8 !important
+}
+
+/*警告或出错*/
+.table tbody tr.warning, .table tbody tr.warning > td, .table tbody tr.warning > th, .table tbody tr .warning {
+    background-color: #FCF8E3 !important
+}
+
+/*危险*/
+.table tbody tr.danger, .table tbody tr.danger > td, .table tbody tr.danger > th, .table tbody tr .danger {
+    background-color: #F2DEDE !important
+}
+
+/*表格文字对齐方式，默认是居左对齐*/
+.table .text-c th, .table .text-c td {
+    text-align: center
+}
+
+/*整行居中*/
+.table .text-r th, .table .text-r td {
+    text-align: right
+}
+
+/*整行居右*/
+.table th.text-l, .table td.text-l {
+    text-align: left !important
+}
+
+/*单独列居左*/
+.table th.text-c, .table td.text-c {
+    text-align: center !important
+}
+
+/*单独列居中*/
+.table th.text-r, .table td.text-r {
+    text-align: right !important
+}
+
+/*单独列居右*/
+
+
+.fade {
+    opacity: 0;
+    -webkit-transition: opacity .15s linear;
+    -o-transition: opacity .15s linear;
+    transition: opacity .15s linear
+}
+
+.fade.in {
+    opacity: 1
+}
+
+.modal-open {
+    overflow: hidden
+}
+
+.modal {
+    position: fixed;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1040;
+    display: none;
+    overflow: hidden;
+    -webkit-overflow-scrolling: touch;
+    outline: 0
+}
+
+.modal.fade .modal-dialog {
+    -webkit-transition: -webkit-transform .3s ease-out;
+    -o-transition: -o-transform .3s ease-out;
+    transition: transform .3s ease-out;
+    -webkit-transform: translate(0, -50%);
+    -ms-transform: translate(0, -50%);
+    -o-transform: translate(0, -50%);
+    transform: translate(0, -50%)
+}
+
+.modal.in .modal-dialog {
+    -webkit-transform: translate(0, 0);
+    -ms-transform: translate(0, 0);
+    -o-transform: translate(0, 0);
+    transform: translate(0, 0)
+}
+
+.modal-open .modal {
+    overflow-x: hidden;
+    overflow-y: auto
+}
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: #000
+}
+
+.modal-backdrop.fade {
+    filter: alpha(opacity=0);
+    opacity: 0
+}
+
+.modal-backdrop.in {
+    filter: alpha(opacity=50);
+    opacity: .5
+}
+
+.modal-dialog {
+    position: relative;
+    width: auto;
+    margin: 10px
+}
+
+.modal-content {
+    position: relative;
+    background-color: #fff;
+    border: 1px solid #999;
+    border: 1px solid rgba(0, 0, 0, .2);
+    outline: 0;
+    -webkit-background-clip: padding-box;
+    background-clip: padding-box;
+    -webkit-box-shadow: 0 3px 9px rgba(0, 0, 0, .5);
+    box-shadow: 0 3px 9px rgba(0, 0, 0, .5)
+}
+
+.modal-header {
+    min-height: 16.42857143px;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    position: relative
+}
+
+.modal-header .close {
+    position: absolute;
+    right: 10px;
+    top: 10px
+}
+
+.modal-header h3, .modal-header .modal-title {
+    margin: 0;
+    padding: 10px 0;
+    font-size: 16px
+}
+
+.modal-body {
+    position: relative;
+    padding: 15px;
+    overflow-y: visible;
+    word-break: break-all
+}
+
+.modal-form {
+    margin-bottom: 0
+}
+
+.modal-footer {
+    padding: 15px;
+    margin-bottom: 0;
+    text-align: right;
+    background-color: #f5f5f5;
+    border-top: 1px solid #eee;
+    *zoom: 1
+}
+
+.modal-footer:before, .modal-footer:after {
+    display: table;
+    content: ""
+}
+
+.modal-footer:after {
+    clear: both
+}
+
+.modal-footer .btn + .btn {
+    margin-left: 5px;
+    margin-bottom: 0
+}
+
+.modal-footer .btn-group .btn + .btn {
+    margin-left: -1px
+}
+
+.modal-footer .btn-block + .btn-block {
+    margin-left: 0
+}
+
+.modal-scrollbar-measure {
+    position: absolute;
+    top: -9999px;
+    width: 50px;
+    height: 50px;
+    overflow: scroll
+}
+
+.radius .modal-content {
+    border-radius: 6px
+}
+
+.radius .modal-footer {
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px
+}
+
+@media (min-width: 768px) {
+    .modal-dialog {
+        width: 600px;
+        margin: 30px auto
+    }
+
+    .modal-content {
+        -webkit-box-shadow: 0 5px 15px rgba(0, 0, 0, .5);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, .5)
+    }
+
+    .modal-sm {
+        width: 300px
+    }
+}
+
+@media (min-width: 992px) {
+    .modal-lg {
+        width: 900px
+    }
+}
+
+.modal-alert {
+    position: fixed;
+    right: auto;
+    bottom: auto;
+    width: 300px;
+    left: 50%;
+    margin-left: -150px;
+    top: 50%;
+    margin-top: -30px;
+    z-index: 9999;
+    background-color: #fff;
+    border: 1px solid #999;
+    border: 1px solid rgba(0, 0, 0, .2);
+    outline: 0;
+    -webkit-background-clip: padding-box;
+    background-clip: padding-box;
+    -webkit-box-shadow: 0 3px 9px rgba(0, 0, 0, .5);
+    box-shadow: 0 3px 9px rgba(0, 0, 0, .5)
+}
+
+.modal-alert-info {
+    padding: 30px;
+    text-align: center;
+    font-size: 14px;
+    background-color: #fff
+}
+
+
+
+
+
+
+#slider-1 {
+    width: 100%;
+    text-align: center;
+    margin: auto;
+}
+
+#slider-1 .bd, #slider-1 .bd li, #slider-1 .bd img {
+    width: 100%;
+    height: 20vm;
+}
+
+#slider-1 .hd {
+    margin-top: 2px;
+    height: 58px;
+    width: 762px
+}
+
+#slider-1 .hd li {
+    position: relative;
+    display: inline-block;
+    float: left;
+    margin-right: 2px;
+    cursor: pointer;
+    width: 125px;
+    height: 58px
+}
+
+#slider-1 .hd li img {
+    display: block;
+    width: 125px;
+    height: 58px
+}
+
+#slider-1 .hd li i {
+    position: absolute;
+    display: block;
+    z-index: 9;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6)
+}
+
+#slider-1 .hd li.active i {
+    width: 11px;
+    height: 6px;
+    background: url(H-ui/static/h-ui/images/iconpic-arrow.png) no-repeat 0 0;
+    top: -6px;
+    left: 50%;
+    margin-left: -5px;
+    bottom: auto;
+    right: auto
+}
