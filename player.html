@@ -150,7 +150,7 @@
     function getPlayerScore() {
         let id = cookie.get("player_id");
         $.ajax({
-            url: "http://127.0.0.1:8000/v1/player/getPlayerScore/" + id,
+            url: "http://api.fsh.ink/v1/player/getPlayerScore/" + id,
             method: "GET",
             dataType: "json",
             data: {
@@ -190,7 +190,7 @@
     function getPlayerBestScore() {
         let id = cookie.get("player_id");
         $.ajax({
-            url: "http://127.0.0.1:8000/v1/player/getPlayerBestScore/" + id,
+            url: "http://api.fsh.ink/v1/player/getPlayerBestScore/" + id,
             method: "GET",
             dataType: "json",
             data: {

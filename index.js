@@ -1,7 +1,7 @@
 function getContest(obj) {
     $.ajax(
         {
-            url: "http://127.0.0.1:8000/v1/index/getContest",
+            url: "http://api.fsh.ink/v1/index/getContest",
             method: "GET",
             success: function (evt, req,) {
                 let html = "";
@@ -48,7 +48,7 @@ showMatch = function (obj, obj_c, speed, obj_type, Event) {
 jQuery.GetMatch = function (obj) {
     let contestId = obj.attr("id");
     $.ajax({
-        url: "http://127.0.0.1:8000/v1/index/getContestMatch/" + contestId,
+        url: "http://api.fsh.ink/v1/index/getContestMatch/" + contestId,
         success: function (evt, req, settings) {
             if (req === "success") {
                 let html = "<table class=\"table table-border table-bg table-bordered table-striped table-hover\">\n" +
@@ -113,7 +113,7 @@ function modaldemo(num, id) {
 
 function OnGroupBtnClick(id, group) {
     $.ajax({
-        url: "http://127.0.0.1:8000/v1/index/getMatchScore/" + id + "/" + group,
+        url: "http://api.fsh.ink/v1/index/getMatchScore/" + id + "/" + group,
         method: "GET",
         success: function (evt, req) {
             if (req === "success") {

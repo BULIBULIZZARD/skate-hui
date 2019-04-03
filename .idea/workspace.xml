@@ -32,7 +32,7 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
-        <entry file="file://$USER_HOME$/Desktop/数据拉取_1 - 副本.sql">
+        <entry file="file://$PROJECT_DIR$/../数据拉取_1 - 副本.sql">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="75">
               <caret line="3" column="7" lean-forward="true" selection-start-line="3" selection-start-column="7" selection-end-line="3" selection-end-column="7" />
@@ -131,21 +131,21 @@
         <option value="$PROJECT_DIR$/H-ui/index.html" />
         <option value="$PROJECT_DIR$/static/js/TweenMax.min.js" />
         <option value="$PROJECT_DIR$/static/js/Stats.min.js" />
-        <option value="$USER_HOME$/Desktop/jiaoben836/css/zzsc.css" />
+        <option value="$PROJECT_DIR$/../jiaoben836/css/zzsc.css" />
         <option value="$PROJECT_DIR$/static/player.html" />
         <option value="$PROJECT_DIR$/index.css" />
         <option value="$PROJECT_DIR$/H-ui/static/h-ui/css/H-ui.min.css" />
         <option value="$PROJECT_DIR$/index.html" />
-        <option value="$USER_HOME$/Desktop/数据拉取_1.sql" />
+        <option value="$PROJECT_DIR$/../数据拉取_1.sql" />
         <option value="$PROJECT_DIR$/index.js" />
         <option value="$PROJECT_DIR$/login.html" />
-        <option value="$USER_HOME$/Desktop/数据拉取.sql" />
+        <option value="$PROJECT_DIR$/../数据拉取.sql" />
         <option value="$PROJECT_DIR$/player.html" />
         <option value="$PROJECT_DIR$/cookie.js" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="7">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="13" />
     <option name="width" value="1382" />
     <option name="height" value="744" />
@@ -318,14 +318,14 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/Desktop/jiaoben836/css/zzsc.css">
+    <entry file="file://$PROJECT_DIR$/../jiaoben836/css/zzsc.css">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="50">
           <caret line="2" selection-start-line="2" selection-end-line="2" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/Desktop/jiaoben836/index.html">
+    <entry file="file://$PROJECT_DIR$/../jiaoben836/index.html">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="350">
           <caret line="32" column="9" lean-forward="true" selection-start-line="10" selection-end-line="32" selection-end-column="9" />
@@ -390,7 +390,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/Desktop/数据拉取_1.sql">
+    <entry file="file://$PROJECT_DIR$/../数据拉取_1.sql">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="925">
           <caret line="76" column="11" lean-forward="true" selection-start-line="76" selection-start-column="11" selection-end-line="76" selection-end-column="11" />
@@ -408,7 +408,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/Desktop/数据拉取.sql">
+    <entry file="file://$PROJECT_DIR$/../数据拉取.sql">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="875">
           <caret line="35" column="33" lean-forward="true" selection-start-line="35" selection-start-column="33" selection-end-line="35" selection-end-column="33" />
@@ -443,7 +443,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/Desktop/getModel/models/s_organize.go">
+    <entry file="file://$PROJECT_DIR$/../getModel/models/s_organize.go">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="225">
           <caret line="9" lean-forward="true" selection-start-line="9" selection-end-line="9" />
@@ -473,7 +473,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$USER_HOME$/Desktop/数据拉取_1 - 副本.sql">
+    <entry file="file://$PROJECT_DIR$/../数据拉取_1 - 副本.sql">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="75">
           <caret line="3" column="7" lean-forward="true" selection-start-line="3" selection-start-column="7" selection-end-line="3" selection-end-column="7" />
