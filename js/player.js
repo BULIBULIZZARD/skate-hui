@@ -1,3 +1,4 @@
+var myData = [];
 var pie = document.getElementById("container_p");
 var myPie = echarts.init(pie);
 var app = {};
