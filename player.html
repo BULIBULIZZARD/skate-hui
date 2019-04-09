@@ -6,7 +6,7 @@
     <script type="text/javascript" src="H-ui/lib/jquery/1.9.1/jquery.min.js"></script>
     <script type="text/javascript" src="H-ui/static/h-ui/js/H-ui.js"></script>
     <script type="text/javascript" src="cookie.js"></script>
-
+    <script type="text/javascript" src="echarts.js"></script>
     <link rel="stylesheet" type="text/css" href="H-ui/static/h-ui/css/H-ui.min.css"/>
     <link rel="stylesheet" type="text/css" href="index.css"/>
 
@@ -67,9 +67,13 @@
 
 <body>
 <div style="width: 80%;margin: 0 auto">
-    <div style="margin: 0 auto;font-size: 16px;text-align: left">
-        <p id="organize_name"></p>
-        <p id="player_name"></p>
+    <div style="margin: 0 auto;font-size: 16px;text-align: left;">
+        <b><p id="organize_name"></p></b>
+        <b><p id="player_name"></p></b>
+    </div>
+    <div style="height: 400px">
+        <div id="container_l" style="height: 100%;width:60%;float:right;"></div>
+        <div id="container_p" style="height: 100%;width:40%;float:left;"></div>
     </div>
     <div style="margin: 0 auto">
         <div id="tab_demo" class="HuiTab">
@@ -106,14 +110,118 @@
                     <tbody>
                 </table>
             </div>
+            <div class="tabCon">
+
+            </div>
+
         </div>
+
     </div>
 
 </div>
 
 </body>
 
-<script>
+<script type="text/javascript">
+
+    var pie = document.getElementById("container_p");
+    var myPie = echarts.init(pie);
+    var app = {};
+    Poption = null;
+    Poption = {
+        title : {
+            text: '记录构成',
+            x:'center'
+        },
+        tooltip : {
+            trigger: 'item',
+            formatter: "{a} <br/>{b} : {c} ({d}%)"
+        },
+        legend: {
+            orient: 'vertical',
+            left: 'left',
+        },
+        series : [
+            {
+                name: '记录',
+                type: 'pie',
+                radius : '55%',
+                center: ['50%', '60%'],
+                data:[
+                    {value:335, name:'4圈'},
+                    {value:310, name:'7圈'},
+                    {value:234, name:'500米'},
+                    {value:135, name:'1000米'},
+                    {value:1548, name:'1500米'}
+                ],
+                itemStyle: {
+                    emphasis: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }
+        ]
+    };
+    if (Poption && typeof Poption === "object") {
+        myPie.setOption(Poption, true);
+        myPie.on('click',function (p) {
+            console.log(p);
+        });
+    }
+
+    var line = document.getElementById("container_l");
+    var myLine = echarts.init(line);
+    var app = {};
+    Loption = null;
+    Loption = {
+        yAxis: {
+            type: 'time',
+            splitLine: {
+                show: true
+            },
+            inverse:true,
+        },
+        xAxis: {
+            type: 'category',
+            data: ["a", "b","c","d","e","f","g"],
+            splitLine: {
+                show: true
+            }
+        },
+        tooltip : {
+            trigger: 'axis',
+            formatter: function (p) {
+                return p[0]['axisValue']+"</br>"+p[0]['value'].replace("0000-00-00 00:","")
+            },
+            axisPointer: {
+                type: 'line',
+                label: {
+                    precision: 2,
+                    backgroundColor: '#6a7985'
+                },
+
+            }
+        },
+        series: [{
+            data: [
+                "0000-00-00 00:01:47.698",
+                "0000-00-00 00:01:47.796",
+                "0000-00-00 00:01:47.796",
+                "0000-00-00 00:01:48.078",
+                "0000-00-00 00:01:50.695",
+                "0000-00-00 00:01:50.888",
+            ],
+
+            type: 'line',
+
+        }]
+    };
+    if (Loption && typeof Loption === "object") {
+        myLine.setOption(Loption, true);
+    }
+
     jQuery.Huitab = function (tabBar, tabCon, class_name, tabEvent, i) {
         var $tab_menu = $(tabBar);
         // 初始化操作
@@ -144,9 +252,7 @@
     // #tab_demo .tabCon 内容区
     // click 事件 点击切换，可以换成mousemove 移动鼠标切换
     // 1	默认第2个tab为当前状态（从0开始）
-</script>
 
-<script>
     function getPlayerScore() {
         let id = cookie.get("player_id");
         $.ajax({
