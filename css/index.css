@@ -410,7 +410,7 @@ table th {
 #slider-1 .hd li.active i {
     width: 11px;
     height: 6px;
-    background: url(H-ui/static/h-ui/images/iconpic-arrow.png) no-repeat 0 0;
+    background: url(../H-ui/static/h-ui/images/iconpic-arrow.png) no-repeat 0 0;
     top: -6px;
     left: 50%;
     margin-left: -5px;

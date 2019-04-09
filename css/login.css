@@ -1,0 +1,42 @@
+body {
+    text-align: center
+}
+
+.clearfix:after {
+    content: "\20";
+    display: block;
+    height: 0;
+    clear: both;
+    visibility: hidden
+}
+
+.clearfix {
+    zoom: 1
+}
+
+.tabBar {
+    border-bottom: 2px solid #eee
+}
+
+.tabBar span {
+    background-color: #e8e8e8;
+    cursor: pointer;
+    display: inline-block;
+    float: left;
+    font-weight: bold;
+    height: 40px;
+    width: 120px;
+    line-height: 40px;
+    padding: 0 15px;
+    font-size: 16px;
+    color: #222222;
+}
+
+.tabBar span.current {
+    background-color: #7883ff;
+    color: #fff
+}
+
+.tabCon {
+    display: none
+}
