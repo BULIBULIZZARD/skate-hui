@@ -5,6 +5,16 @@ getPlayerBestScore();
 var myData = [];
 var show_data = [];
 getEchartsData();
+
+/**
+ * 弹出层
+ * @param tabBar
+ * @param tabCon
+ * @param class_name
+ * @param tabEvent
+ * @param i
+ * @constructor
+ */
 jQuery.Huitab = function (tabBar, tabCon, class_name, tabEvent, i) {
     var $tab_menu = $(tabBar);
     // 初始化操作
@@ -36,6 +46,9 @@ HiAlert = function (string, time = 2000) {
 // click 事件 点击切换，可以换成mousemove 移动鼠标切换
 // 1	默认第2个tab为当前状态（从0开始）
 
+/**
+ * 获取运动员所有成绩
+ */
 function getPlayerScore() {
     let id = cookie.get("player_id");
     $.ajax({
@@ -76,6 +89,9 @@ function getPlayerScore() {
     })
 }
 
+/**
+ * ajax获取单项最好成绩
+ */
 function getPlayerBestScore() {
     let id = cookie.get("player_id");
     $.ajax({
@@ -117,6 +133,9 @@ function getPlayerBestScore() {
 
 }
 
+/**
+ * ajax获取Echarts数据
+ */
 function getEchartsData() {
     let id = cookie.get("player_id");
     $.ajax({
@@ -153,6 +172,9 @@ function getEchartsData() {
     })
 }
 
+/**
+ * 构建饼图数据 点击事件
+ */
 function buildPie() {
     var pie = document.getElementById("container_p");
     var myPie = echarts.init(pie);
@@ -201,6 +223,10 @@ function buildPie() {
     }
 }
 
+/**
+ * 构建折线图数据 点击事件
+ * @param name
+ */
 function buildLine(name) {
     var line = document.getElementById("container_l");
     var myLine = echarts.init(line);
@@ -251,6 +277,7 @@ function buildLine(name) {
     }
     
 }
+
 
 function  pieCount(v){
     if (v === "")return 0;
