@@ -193,7 +193,7 @@ function buildPie() {
 
 function buildLine() {
     var line = document.getElementById("container_l");
-    var myLine = echarts.init(line,"light");
+    var myLine = echarts.init(line);
     var Loption = {
         yAxis: {
             type: 'time',
