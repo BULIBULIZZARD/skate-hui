@@ -133,9 +133,19 @@ function getEchartsData() {
                     token_timeout();
                 }
                 myData = evt;
-                show_data = myData["1000米"];
-                buildPie();
-                buildLine();
+                let match = ["4圈","7圈","500米","1000米","1500米"];
+                let name = "";
+                for (let i =0;i<match.length;i++){
+                    show_data = myData[match[i]];
+                    if (show_data!==""){
+                      name  = match[i];
+                      break;
+                    }
+                }
+                if (name !== ""){
+                    buildPie();
+                    buildLine(name);
+                }
             } else {
                 HiAlert("ajax fail")
             }
@@ -186,15 +196,19 @@ function buildPie() {
         myPie.setOption(Poption, true);
         myPie.on('click', function (p) {
             show_data = myData[p['name']];
-            buildLine()
+            buildLine(p['name'])
         });
     }
 }
 
-function buildLine() {
+function buildLine(name) {
     var line = document.getElementById("container_l");
     var myLine = echarts.init(line);
     var Loption = {
+        title: {
+            text: name,
+            x: 'left'
+        },
         yAxis: {
             type: 'time',
             name: '记录',
