@@ -1,105 +1,10 @@
+checkCookie();
+getPlayerScore();
+getPlayerBestScore();
+
 var myData = [];
-var pie = document.getElementById("container_p");
-var myPie = echarts.init(pie);
-var app = {};
-Poption = null;
-Poption = {
-    title: {
-        text: '有效记录',
-        x: 'center'
-    },
-    tooltip: {
-        trigger: 'item',
-        formatter: "{b} : {c}场 ({d}%)"
-    },
-    legend: {
-        orient: 'vertical',
-        left: 'left',
-    },
-    series: [
-        {
-            name: '记录',
-            type: 'pie',
-            radius: '55%',
-            center: ['50%', '60%'],
-            data: [
-                {value: 335, name: '4圈'},
-                {value: 310, name: '7圈'},
-                {value: 234, name: '500米'},
-                {value: 135, name: '1000米'},
-                {value: 1548, name: '1500米'}
-            ],
-            itemStyle: {
-                emphasis: {
-                    shadowBlur: 10,
-                    shadowOffsetX: 0,
-                    shadowColor: 'rgba(0, 0, 0, 0.5)'
-                }
-            }
-        }
-    ]
-};
-if (Poption && typeof Poption === "object") {
-    myPie.setOption(Poption, true);
-    myPie.on('click', function (p) {
-        console.log(p);
-    });
-}
-
-var line = document.getElementById("container_l");
-var myLine = echarts.init(line);
-var app = {};
-Loption = null;
-Loption = {
-    yAxis: {
-        type: 'time',
-        name: '记录',
-        splitLine: {
-            show: true
-        },
-        inverse: true,
-    },
-    xAxis: {
-        type: 'category',
-        axisLabel: "",
-        name: '比赛',
-        data: ["a", "b", "c", "d", "e", "f", "g"],
-        splitLine: {
-            show: true
-        }
-    },
-    tooltip: {
-        trigger: 'axis',
-        formatter: function (p) {
-            return p[0]['axisValue'] + "</br>" + p[0]['value'].replace("0000-00-00 00:", "")
-        },
-        axisPointer: {
-            type: 'cross',
-            label: {
-                precision: 2,
-                backgroundColor: '#6a7985'
-            },
-
-        }
-    },
-    series: [{
-        data: [
-            "0000-00-00 00:01:47.698",
-            "0000-00-00 00:01:47.796",
-            "0000-00-00 00:01:47.796",
-            "0000-00-00 00:01:48.078",
-            "0000-00-00 00:01:50.695",
-            "0000-00-00 00:01:50.888",
-        ],
-
-        type: 'line',
-
-    }]
-};
-if (Loption && typeof Loption === "object") {
-    myLine.setOption(Loption, true);
-}
-
+var show_data = [];
+getEchartsData();
 jQuery.Huitab = function (tabBar, tabCon, class_name, tabEvent, i) {
     var $tab_menu = $(tabBar);
     // 初始化操作
@@ -134,7 +39,7 @@ HiAlert = function (string, time = 2000) {
 function getPlayerScore() {
     let id = cookie.get("player_id");
     $.ajax({
-        url: "http://api.fsh.ink/v1/player/getPlayerScore/" + id,
+        url: "http://api.fsh.ink/v1/player/getPlayerScore",
         method: "GET",
         dataType: "json",
         data: {
@@ -174,7 +79,7 @@ function getPlayerScore() {
 function getPlayerBestScore() {
     let id = cookie.get("player_id");
     $.ajax({
-        url: "http://api.fsh.ink/v1/player/getPlayerBestScore/" + id,
+        url: "http://api.fsh.ink/v1/player/getPlayerBestScore",
         method: "GET",
         dataType: "json",
         data: {
@@ -212,6 +117,128 @@ function getPlayerBestScore() {
 
 }
 
-checkCookie();
-getPlayerScore();
-getPlayerBestScore();
+function getEchartsData() {
+    let id = cookie.get("player_id");
+    $.ajax({
+        url: "http://api.fsh.ink/v1/player/getShowData",
+        method: "GET",
+        dataType: "json",
+        data: {
+            id: id,
+            token: cookie.get("player_token"),
+        },
+        success: function (evt, req, settings) {
+            if (req === "success") {
+                if (evt['message'] === "fail") {
+                    token_timeout();
+                }
+                myData = evt;
+                show_data = myData["1000米"];
+                buildPie();
+                buildLine();
+            } else {
+                HiAlert("ajax fail")
+            }
+        }
+    })
+}
+
+function buildPie() {
+    var pie = document.getElementById("container_p");
+    var myPie = echarts.init(pie);
+    var Poption = {
+        title: {
+            text: '有效记录',
+            x: 'center'
+        },
+        tooltip: {
+            trigger: 'item',
+            formatter: "{b} : {c}场 ({d}%)"
+        },
+        legend: {
+            orient: 'vertical',
+            left: 'left',
+        },
+        series: [
+            {
+                name: '记录',
+                type: 'pie',
+                radius: '55%',
+                center: ['50%', '60%'],
+                data: [
+                    {value: pieCount(myData['4圈']), name: '4圈'},
+                    {value: pieCount(myData['7圈']), name: '7圈'},
+                    {value: pieCount(myData['500米']), name: '500米'},
+                    {value: pieCount(myData['1000米']), name: '1000米'},
+                    {value: pieCount(myData['1500米']), name: '1500米'}
+                ],
+                itemStyle: {
+                    emphasis: {
+                        shadowBlur: 10,
+                        shadowOffsetX: 0,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }
+        ]
+    };
+    if (Poption && typeof Poption === "object") {
+        myPie.setOption(Poption, true);
+        myPie.on('click', function (p) {
+            show_data = myData[p['name']];
+            buildLine()
+        });
+    }
+}
+
+function buildLine() {
+    var line = document.getElementById("container_l");
+    var myLine = echarts.init(line,"light");
+    var Loption = {
+        yAxis: {
+            type: 'time',
+            name: '记录',
+            splitLine: {
+                show: true
+            },
+            inverse: true,
+        },
+        xAxis: {
+            type: 'category',
+            axisLabel: "",
+            name: '比赛日期',
+            data: show_data['date'],
+            splitLine: {
+                show: true
+            }
+        },
+        tooltip: {
+            trigger: 'axis',
+            formatter: function (p) {
+                return p[0]['axisValue'] + "</br>  " + show_data['match_type'][p[0]['dataIndex']] + "</br> 成绩: " + p[0]['value'].replace("0000-00-00 00:", "")
+            },
+            axisPointer: {
+                type: 'cross',
+                label: {
+                    precision: 2,
+                    backgroundColor: '#6a7985'
+                },
+
+            }
+        },
+        series: [{
+            data: show_data['value'],
+            type: 'line',
+
+        }]
+    };
+    if (Loption && typeof Loption === "object") {
+        myLine.setOption(Loption, true);
+    }
+    
+}
+
+function  pieCount(v){
+    if (v === "")return 0;
+    return v['value'].length
+}
