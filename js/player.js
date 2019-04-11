@@ -66,7 +66,10 @@ function getPlayerScore() {
                     token_timeout();
                 }
                 for (let i = 0; i < evt['data'].length; i++) {
-                    html += "<tr>\n" +
+                    let group = evt['data'][i]['s_group'];
+                    group = group.replace("第","");
+                    group = group.replace("组","");
+                    html += "<tr onclick='new OnGroupBtnClick("+evt['data'][i]['match_id'] +","+ group + ") ' >\n" +
                         "        <td>" + evt['data'][i]['match_name'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['group_type'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['gender'] + "</td>\n" +
@@ -111,7 +114,10 @@ function getPlayerBestScore() {
             if (req === "success") {
                 for (let i = 0; i < 5; i++) {
                     if (evt[i] !== "filter") {
-                        html += "<tr>\n" +
+                        let group = evt[i]['s_group'];
+                        group = group.replace("第","");
+                        group = group.replace("组","");
+                        html += "<tr onclick=' new OnGroupBtnClick(" + evt[i]['match_id'] + "," +group + ")'>\n" +
                             "        <td>" + evt[i]['match_name'] + "</td>\n" +
                             "        <td>" + evt[i]['group_type'] + "</td>\n" +
                             "        <td>" + evt[i]['gender'] + "</td>\n" +
@@ -274,6 +280,9 @@ function buildLine(name) {
     };
     if (Loption && typeof Loption === "object") {
         myLine.setOption(Loption, true);
+        myLine.on('click',function (p) {
+            new OnGroupBtnClick(show_data['match_id'][p['dataIndex']],show_data['group'][p['dataIndex']]);
+        })
     }
     
 }
@@ -282,4 +291,54 @@ function buildLine(name) {
 function  pieCount(v){
     if (v === "")return 0;
     return v['value'].length
+}
+
+
+/**
+ * 
+ * @param id
+ * @param group
+ * @constructor
+ */
+function OnGroupBtnClick(id, group) {
+    $.ajax({
+        url: "http://api.fsh.ink/v1/index/getMatchScore/" + id + "/" + group,
+        method: "GET",
+        success: function (evt, req) {
+            if (req === "success") {
+                let html = "<table class=\"table table-border table-bg table-bordered table-striped table-hover\">\n" +
+                    "    <thead>\n" +
+                    "    <tr>\n" +
+                    "        <th>名次</th>\n" +
+                    "        <th>道次</th>\n" +
+                    "        <th>头盔号</th>\n" +
+                    "        <th>姓名</th>\n" +
+                    "        <th>单位</th>\n" +
+                    "        <th>成绩</th>\n" +
+                    "        <th>备注</th>\n" +
+                    "    </tr>\n" +
+                    "    </thead>\n" +
+                    "    <tbody>\n";
+                for (let i = 0; i < evt['data'].length; i++) {
+                    html += "<tr>\n" +
+                        "        <td>" + evt['data'][i]['no'] + "</td>\n" +
+                        "        <td>" + evt['data'][i]['row_num'] + "</td>\n" +
+                        "        <td>" + evt['data'][i]['head_num'] + "</td>\n" +
+                        "        <td>" + evt['data'][i]['name'] + "</td>\n" +
+                        "        <td>" + evt['data'][i]['organize'] + "</td>\n" +
+                        "        <td>" + evt['data'][i]['time_score'] + "</td>\n" +
+                        "        <td>" + evt['data'][i]['remark'] + "</td>\n" +
+                        "    </tr>\n";
+                }
+                if (evt['data'].length === 0) {
+                    html += "        <tr><td colspan='8' style='text-align: center'>暂无数据</td></tr>\n"
+                }
+                html += "</tbody>\n" +
+                    "</table>";
+                $("div.modal-body").html(html);
+                $("#modal-demo").modal("show")
+            }
+        }
+    })
+
 }
