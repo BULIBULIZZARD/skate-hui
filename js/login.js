@@ -20,7 +20,41 @@ $(function () {
 });
 
 function organize_login() {
-
+    let username = document.getElementById("org_username").value;
+    let password = document.getElementById("org_password").value;
+    if (username.length === 0) {
+        HiAlert("username is empty");
+        return ""
+    }
+    if (password.length === 0) {
+        HiAlert("username is empty");
+        return ""
+    }
+    $.ajax({
+        url: "http://api.fsh.ink/v1/organize/login",
+        method: "POST",
+        dataType: "json",
+        data: {
+            username: username,
+            password: password,
+        },
+        success: function (evt, req) {
+            if (req === "success") {
+                console.log(evt);
+                if (evt['flag']) {
+                    cookie.set("organize_name", evt['name']);
+                    cookie.set("organize_token", evt['token']);
+                    cookie.set("organize_id", evt['id']);
+                    HiAlert("登陆成功");
+                    window.setTimeout("window.location='index.html'",2000);
+                } else {
+                    HiAlert(evt['message'])
+                }
+            } else {
+                HiAlert("ajax fail")
+            }
+        }
+    });
 }
 
 function player_login() {

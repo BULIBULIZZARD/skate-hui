@@ -9,7 +9,7 @@
     <link rel="stylesheet" type="text/css" href="H-ui/static/h-ui/css/H-ui.min.css"/>
     <link rel="stylesheet" type="text/css" href="css/index.css"/>
     <link rel="stylesheet" type="text/css" href="css/player.css"/>
-    <title>我的主页</title>
+    <title>组织主页</title>
 </head>
 
 
@@ -22,9 +22,8 @@
 
 <body>
 <div style="width: 80%;margin: 0 auto">
-    <div style="margin: 0 auto;font-size: 16px;text-align: left;">
+    <div style="margin: 0 auto;font-size: 20px;">
         <b><p id="organize_name"></p></b>
-        <b><p id="player_name"></p></b>
     </div>
     <div style="height: 400px;padding-top: 10px;">
         <div id="container_r" style="height: 100%;width:60%;float:right;"></div>
@@ -32,13 +31,14 @@
     </div>
     <div style="margin: 0 auto;padding-top: 5px;">
         <div id="tab_demo" class="HuiTab">
-            <div class="tabBar clearfix "><span>我的记录</span><span>单项最好记录</span><span>账号管理</span></div>
+            <div class="tabBar clearfix "><span>比赛记录</span><span>单项最好记录</span><span>账号管理</span></div>
             <div class="tabCon">
                 <table id="myScore" class="table table-border table-bg table-bordered table-striped table-hover">
                     <thead>
                     <tr>
                         <th>项目</th>
                         <th>组别</th>
+                        <th>姓名</th>
                         <th>性别</th>
                         <th>赛别</th>
                         <th>分组</th>
@@ -55,6 +55,7 @@
                     <tr>
                         <th>项目</th>
                         <th>组别</th>
+                        <th>姓名</th>
                         <th>性别</th>
                         <th>赛别</th>
                         <th>分组</th>
@@ -89,5 +90,5 @@
 </div>
 </body>
 
-<script type="text/javascript" src="js/player.js"></script>
+<script type="text/javascript" src="js/organize.js"></script>
 </html>

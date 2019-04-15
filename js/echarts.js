@@ -1716,7 +1716,9 @@ var stop = isDomLevel2 ? function (e) {
  * @return {boolean}
  */
 
-
+function isMiddleOrRightButtonOnMouseUpDown(e) {
+  return e.which === 2 || e.which === 3;
+}
 /**
  * To be removed.
  * @deprecated
@@ -30963,101 +30965,7 @@ function retrieveColumnLayout(barWidthAndOffset, axis, seriesModel) {
  * @param {module:echarts/model/Global} ecModel
  */
 
-function layout(seriesType, ecModel) {
-  var seriesModels = prepareLayoutBarSeries(seriesType, ecModel);
-  var barWidthAndOffset = makeColumnLayout(seriesModels);
-  var lastStackCoords = {};
-  each$1(seriesModels, function (seriesModel) {
-    var data = seriesModel.getData();
-    var cartesian = seriesModel.coordinateSystem;
-    var baseAxis = cartesian.getBaseAxis();
-    var stackId = getSeriesStackId(seriesModel);
-    var columnLayoutInfo = barWidthAndOffset[getAxisKey(baseAxis)][stackId];
-    var columnOffset = columnLayoutInfo.offset;
-    var columnWidth = columnLayoutInfo.width;
-    var valueAxis = cartesian.getOtherAxis(baseAxis);
-    var barMinHeight = seriesModel.get('barMinHeight') || 0;
-    lastStackCoords[stackId] = lastStackCoords[stackId] || [];
-    data.setLayout({
-      offset: columnOffset,
-      size: columnWidth
-    });
-    var valueDim = data.mapDimension(valueAxis.dim);
-    var baseDim = data.mapDimension(baseAxis.dim);
-    var stacked = isDimensionStacked(data, valueDim
-    /*, baseDim*/
-    );
-    var isValueAxisH = valueAxis.isHorizontal();
-    var valueAxisStart = getValueAxisStart(baseAxis, valueAxis, stacked);
-
-    for (var idx = 0, len = data.count(); idx < len; idx++) {
-      var value = data.get(valueDim, idx);
-      var baseValue = data.get(baseDim, idx);
-
-      if (isNaN(value)) {
-        continue;
-      }
-
-      var sign = value >= 0 ? 'p' : 'n';
-      var baseCoord = valueAxisStart; // Because of the barMinHeight, we can not use the value in
-      // stackResultDimension directly.
-
-      if (stacked) {
-        // Only ordinal axis can be stacked.
-        if (!lastStackCoords[stackId][baseValue]) {
-          lastStackCoords[stackId][baseValue] = {
-            p: valueAxisStart,
-            // Positive stack
-            n: valueAxisStart // Negative stack
-
-          };
-        } // Should also consider #4243
-
-
-        baseCoord = lastStackCoords[stackId][baseValue][sign];
-      }
-
-      var x;
-      var y;
-      var width;
-      var height;
-
-      if (isValueAxisH) {
-        var coord = cartesian.dataToPoint([value, baseValue]);
-        x = baseCoord;
-        y = coord[1] + columnOffset;
-        width = coord[0] - valueAxisStart;
-        height = columnWidth;
-
-        if (Math.abs(width) < barMinHeight) {
-          width = (width < 0 ? -1 : 1) * barMinHeight;
-        }
-
-        stacked && (lastStackCoords[stackId][baseValue][sign] += width);
-      } else {
-        var coord = cartesian.dataToPoint([baseValue, value]);
-        x = coord[0] + columnOffset;
-        y = baseCoord;
-        width = columnWidth;
-        height = coord[1] - valueAxisStart;
-
-        if (Math.abs(height) < barMinHeight) {
-          // Include zero to has a positive bar
-          height = (height <= 0 ? -1 : 1) * barMinHeight;
-        }
-
-        stacked && (lastStackCoords[stackId][baseValue][sign] += height);
-      }
-
-      data.setItemLayout(idx, {
-        x: x,
-        y: y,
-        width: width,
-        height: height
-      });
-    }
-  }, this);
-} // TODO: Do not support stack in large mode yet.
+ // TODO: Do not support stack in large mode yet.
 
 var largeLayout = {
   seriesType: 'bar',
@@ -33405,3243 +33313,6 @@ each$1(['extendShape', 'extendPath', 'makePath', 'makeImage', 'mergePath', 'resi
 * specific language governing permissions and limitations
 * under the License.
 */
-
-/**
- * Cartesian coordinate system
- * @module  echarts/coord/Cartesian
- *
- */
-function dimAxisMapper(dim) {
-  return this._axes[dim];
-}
-/**
- * @alias module:echarts/coord/Cartesian
- * @constructor
- */
-
-
-var Cartesian = function (name) {
-  this._axes = {};
-  this._dimList = [];
-  /**
-   * @type {string}
-   */
-
-  this.name = name || '';
-};
-
-Cartesian.prototype = {
-  constructor: Cartesian,
-  type: 'cartesian',
-
-  /**
-   * Get axis
-   * @param  {number|string} dim
-   * @return {module:echarts/coord/Cartesian~Axis}
-   */
-  getAxis: function (dim) {
-    return this._axes[dim];
-  },
-
-  /**
-   * Get axes list
-   * @return {Array.<module:echarts/coord/Cartesian~Axis>}
-   */
-  getAxes: function () {
-    return map(this._dimList, dimAxisMapper, this);
-  },
-
-  /**
-   * Get axes list by given scale type
-   */
-  getAxesByScale: function (scaleType) {
-    scaleType = scaleType.toLowerCase();
-    return filter(this.getAxes(), function (axis) {
-      return axis.scale.type === scaleType;
-    });
-  },
-
-  /**
-   * Add axis
-   * @param {module:echarts/coord/Cartesian.Axis}
-   */
-  addAxis: function (axis) {
-    var dim = axis.dim;
-    this._axes[dim] = axis;
-
-    this._dimList.push(dim);
-  },
-
-  /**
-   * Convert data to coord in nd space
-   * @param {Array.<number>|Object.<string, number>} val
-   * @return {Array.<number>|Object.<string, number>}
-   */
-  dataToCoord: function (val) {
-    return this._dataCoordConvert(val, 'dataToCoord');
-  },
-
-  /**
-   * Convert coord in nd space to data
-   * @param  {Array.<number>|Object.<string, number>} val
-   * @return {Array.<number>|Object.<string, number>}
-   */
-  coordToData: function (val) {
-    return this._dataCoordConvert(val, 'coordToData');
-  },
-  _dataCoordConvert: function (input, method) {
-    var dimList = this._dimList;
-    var output = input instanceof Array ? [] : {};
-
-    for (var i = 0; i < dimList.length; i++) {
-      var dim = dimList[i];
-      var axis = this._axes[dim];
-      output[dim] = axis[method](input[dim]);
-    }
-
-    return output;
-  }
-};
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-function Cartesian2D(name) {
-  Cartesian.call(this, name);
-}
-
-Cartesian2D.prototype = {
-  constructor: Cartesian2D,
-  type: 'cartesian2d',
-
-  /**
-   * @type {Array.<string>}
-   * @readOnly
-   */
-  dimensions: ['x', 'y'],
-
-  /**
-   * Base axis will be used on stacking.
-   *
-   * @return {module:echarts/coord/cartesian/Axis2D}
-   */
-  getBaseAxis: function () {
-    return this.getAxesByScale('ordinal')[0] || this.getAxesByScale('time')[0] || this.getAxis('x');
-  },
-
-  /**
-   * If contain point
-   * @param {Array.<number>} point
-   * @return {boolean}
-   */
-  containPoint: function (point) {
-    var axisX = this.getAxis('x');
-    var axisY = this.getAxis('y');
-    return axisX.contain(axisX.toLocalCoord(point[0])) && axisY.contain(axisY.toLocalCoord(point[1]));
-  },
-
-  /**
-   * If contain data
-   * @param {Array.<number>} data
-   * @return {boolean}
-   */
-  containData: function (data) {
-    return this.getAxis('x').containData(data[0]) && this.getAxis('y').containData(data[1]);
-  },
-
-  /**
-   * @param {Array.<number>} data
-   * @param {Array.<number>} out
-   * @return {Array.<number>}
-   */
-  dataToPoint: function (data, reserved, out) {
-    var xAxis = this.getAxis('x');
-    var yAxis = this.getAxis('y');
-    out = out || [];
-    out[0] = xAxis.toGlobalCoord(xAxis.dataToCoord(data[0]));
-    out[1] = yAxis.toGlobalCoord(yAxis.dataToCoord(data[1]));
-    return out;
-  },
-
-  /**
-   * @param {Array.<number>} data
-   * @param {Array.<number>} out
-   * @return {Array.<number>}
-   */
-  clampData: function (data, out) {
-    var xScale = this.getAxis('x').scale;
-    var yScale = this.getAxis('y').scale;
-    var xAxisExtent = xScale.getExtent();
-    var yAxisExtent = yScale.getExtent();
-    var x = xScale.parse(data[0]);
-    var y = yScale.parse(data[1]);
-    out = out || [];
-    out[0] = Math.min(Math.max(Math.min(xAxisExtent[0], xAxisExtent[1]), x), Math.max(xAxisExtent[0], xAxisExtent[1]));
-    out[1] = Math.min(Math.max(Math.min(yAxisExtent[0], yAxisExtent[1]), y), Math.max(yAxisExtent[0], yAxisExtent[1]));
-    return out;
-  },
-
-  /**
-   * @param {Array.<number>} point
-   * @param {Array.<number>} out
-   * @return {Array.<number>}
-   */
-  pointToData: function (point, out) {
-    var xAxis = this.getAxis('x');
-    var yAxis = this.getAxis('y');
-    out = out || [];
-    out[0] = xAxis.coordToData(xAxis.toLocalCoord(point[0]));
-    out[1] = yAxis.coordToData(yAxis.toLocalCoord(point[1]));
-    return out;
-  },
-
-  /**
-   * Get other axis
-   * @param {module:echarts/coord/cartesian/Axis2D} axis
-   */
-  getOtherAxis: function (axis) {
-    return this.getAxis(axis.dim === 'x' ? 'y' : 'x');
-  }
-};
-inherits(Cartesian2D, Cartesian);
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-/**
- * Extend axis 2d
- * @constructor module:echarts/coord/cartesian/Axis2D
- * @extends {module:echarts/coord/cartesian/Axis}
- * @param {string} dim
- * @param {*} scale
- * @param {Array.<number>} coordExtent
- * @param {string} axisType
- * @param {string} position
- */
-
-var Axis2D = function (dim, scale, coordExtent, axisType, position) {
-  Axis.call(this, dim, scale, coordExtent);
-  /**
-   * Axis type
-   *  - 'category'
-   *  - 'value'
-   *  - 'time'
-   *  - 'log'
-   * @type {string}
-   */
-
-  this.type = axisType || 'value';
-  /**
-   * Axis position
-   *  - 'top'
-   *  - 'bottom'
-   *  - 'left'
-   *  - 'right'
-   */
-
-  this.position = position || 'bottom';
-};
-
-Axis2D.prototype = {
-  constructor: Axis2D,
-
-  /**
-   * Index of axis, can be used as key
-   */
-  index: 0,
-
-  /**
-   * Implemented in <module:echarts/coord/cartesian/Grid>.
-   * @return {Array.<module:echarts/coord/cartesian/Axis2D>}
-   *         If not on zero of other axis, return null/undefined.
-   *         If no axes, return an empty array.
-   */
-  getAxesOnZeroOf: null,
-
-  /**
-   * Axis model
-   * @param {module:echarts/coord/cartesian/AxisModel}
-   */
-  model: null,
-  isHorizontal: function () {
-    var position = this.position;
-    return position === 'top' || position === 'bottom';
-  },
-
-  /**
-   * Each item cooresponds to this.getExtent(), which
-   * means globalExtent[0] may greater than globalExtent[1],
-   * unless `asc` is input.
-   *
-   * @param {boolean} [asc]
-   * @return {Array.<number>}
-   */
-  getGlobalExtent: function (asc) {
-    var ret = this.getExtent();
-    ret[0] = this.toGlobalCoord(ret[0]);
-    ret[1] = this.toGlobalCoord(ret[1]);
-    asc && ret[0] > ret[1] && ret.reverse();
-    return ret;
-  },
-  getOtherAxis: function () {
-    this.grid.getOtherAxis();
-  },
-
-  /**
-   * @override
-   */
-  pointToData: function (point, clamp) {
-    return this.coordToData(this.toLocalCoord(point[this.dim === 'x' ? 0 : 1]), clamp);
-  },
-
-  /**
-   * Transform global coord to local coord,
-   * i.e. var localCoord = axis.toLocalCoord(80);
-   * designate by module:echarts/coord/cartesian/Grid.
-   * @type {Function}
-   */
-  toLocalCoord: null,
-
-  /**
-   * Transform global coord to local coord,
-   * i.e. var globalCoord = axis.toLocalCoord(40);
-   * designate by module:echarts/coord/cartesian/Grid.
-   * @type {Function}
-   */
-  toGlobalCoord: null
-};
-inherits(Axis2D, Axis);
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-var defaultOption = {
-  show: true,
-  zlevel: 0,
-  z: 0,
-  // Inverse the axis.
-  inverse: false,
-  // Axis name displayed.
-  name: '',
-  // 'start' | 'middle' | 'end'
-  nameLocation: 'end',
-  // By degree. By defualt auto rotate by nameLocation.
-  nameRotate: null,
-  nameTruncate: {
-    maxWidth: null,
-    ellipsis: '...',
-    placeholder: '.'
-  },
-  // Use global text style by default.
-  nameTextStyle: {},
-  // The gap between axisName and axisLine.
-  nameGap: 15,
-  // Default `false` to support tooltip.
-  silent: false,
-  // Default `false` to avoid legacy user event listener fail.
-  triggerEvent: false,
-  tooltip: {
-    show: false
-  },
-  axisPointer: {},
-  axisLine: {
-    show: true,
-    onZero: true,
-    onZeroAxisIndex: null,
-    lineStyle: {
-      color: '#333',
-      width: 1,
-      type: 'solid'
-    },
-    // The arrow at both ends the the axis.
-    symbol: ['none', 'none'],
-    symbolSize: [10, 15]
-  },
-  axisTick: {
-    show: true,
-    // Whether axisTick is inside the grid or outside the grid.
-    inside: false,
-    // The length of axisTick.
-    length: 5,
-    lineStyle: {
-      width: 1
-    }
-  },
-  axisLabel: {
-    show: true,
-    // Whether axisLabel is inside the grid or outside the grid.
-    inside: false,
-    rotate: 0,
-    // true | false | null/undefined (auto)
-    showMinLabel: null,
-    // true | false | null/undefined (auto)
-    showMaxLabel: null,
-    margin: 8,
-    // formatter: null,
-    fontSize: 12
-  },
-  splitLine: {
-    show: true,
-    lineStyle: {
-      color: ['#ccc'],
-      width: 1,
-      type: 'solid'
-    }
-  },
-  splitArea: {
-    show: false,
-    areaStyle: {
-      color: ['rgba(250,250,250,0.3)', 'rgba(200,200,200,0.3)']
-    }
-  }
-};
-var axisDefault = {};
-axisDefault.categoryAxis = merge({
-  // The gap at both ends of the axis. For categoryAxis, boolean.
-  boundaryGap: true,
-  // Set false to faster category collection.
-  // Only usefull in the case like: category is
-  // ['2012-01-01', '2012-01-02', ...], where the input
-  // data has been ensured not duplicate and is large data.
-  // null means "auto":
-  // if axis.data provided, do not deduplication,
-  // else do deduplication.
-  deduplication: null,
-  // splitArea: {
-  // show: false
-  // },
-  splitLine: {
-    show: false
-  },
-  axisTick: {
-    // If tick is align with label when boundaryGap is true
-    alignWithLabel: false,
-    interval: 'auto'
-  },
-  axisLabel: {
-    interval: 'auto'
-  }
-}, defaultOption);
-axisDefault.valueAxis = merge({
-  // The gap at both ends of the axis. For value axis, [GAP, GAP], where
-  // `GAP` can be an absolute pixel number (like `35`), or percent (like `'30%'`)
-  boundaryGap: [0, 0],
-  // TODO
-  // min/max: [30, datamin, 60] or [20, datamin] or [datamin, 60]
-  // Min value of the axis. can be:
-  // + a number
-  // + 'dataMin': use the min value in data.
-  // + null/undefined: auto decide min value (consider pretty look and boundaryGap).
-  // min: null,
-  // Max value of the axis. can be:
-  // + a number
-  // + 'dataMax': use the max value in data.
-  // + null/undefined: auto decide max value (consider pretty look and boundaryGap).
-  // max: null,
-  // Readonly prop, specifies start value of the range when using data zoom.
-  // rangeStart: null
-  // Readonly prop, specifies end value of the range when using data zoom.
-  // rangeEnd: null
-  // Optional value can be:
-  // + `false`: always include value 0.
-  // + `true`: the extent do not consider value 0.
-  // scale: false,
-  // AxisTick and axisLabel and splitLine are caculated based on splitNumber.
-  splitNumber: 5 // Interval specifies the span of the ticks is mandatorily.
-  // interval: null
-  // Specify min interval when auto calculate tick interval.
-  // minInterval: null
-  // Specify max interval when auto calculate tick interval.
-  // maxInterval: null
-
-}, defaultOption);
-axisDefault.timeAxis = defaults({
-  scale: true,
-  min: 'dataMin',
-  max: 'dataMax'
-}, axisDefault.valueAxis);
-axisDefault.logAxis = defaults({
-  scale: true,
-  logBase: 10
-}, axisDefault.valueAxis);
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-var AXIS_TYPES = ['value', 'category', 'time', 'log'];
-/**
- * Generate sub axis model class
- * @param {string} axisName 'x' 'y' 'radius' 'angle' 'parallel'
- * @param {module:echarts/model/Component} BaseAxisModelClass
- * @param {Function} axisTypeDefaulter
- * @param {Object} [extraDefaultOption]
- */
-
-var axisModelCreator = function (axisName, BaseAxisModelClass, axisTypeDefaulter, extraDefaultOption) {
-  each$1(AXIS_TYPES, function (axisType) {
-    BaseAxisModelClass.extend({
-      /**
-       * @readOnly
-       */
-      type: axisName + 'Axis.' + axisType,
-      mergeDefaultAndTheme: function (option, ecModel) {
-        var layoutMode = this.layoutMode;
-        var inputPositionParams = layoutMode ? getLayoutParams(option) : {};
-        var themeModel = ecModel.getTheme();
-        merge(option, themeModel.get(axisType + 'Axis'));
-        merge(option, this.getDefaultOption());
-        option.type = axisTypeDefaulter(axisName, option);
-
-        if (layoutMode) {
-          mergeLayoutParam(option, inputPositionParams, layoutMode);
-        }
-      },
-
-      /**
-       * @override
-       */
-      optionUpdated: function () {
-        var thisOption = this.option;
-
-        if (thisOption.type === 'category') {
-          this.__ordinalMeta = OrdinalMeta.createByAxisModel(this);
-        }
-      },
-
-      /**
-       * Should not be called before all of 'getInitailData' finished.
-       * Because categories are collected during initializing data.
-       */
-      getCategories: function (rawData) {
-        var option = this.option; // FIXME
-        // warning if called before all of 'getInitailData' finished.
-
-        if (option.type === 'category') {
-          if (rawData) {
-            return option.data;
-          }
-
-          return this.__ordinalMeta.categories;
-        }
-      },
-      getOrdinalMeta: function () {
-        return this.__ordinalMeta;
-      },
-      defaultOption: mergeAll([{}, axisDefault[axisType + 'Axis'], extraDefaultOption], true)
-    });
-  });
-  ComponentModel.registerSubTypeDefaulter(axisName + 'Axis', curry(axisTypeDefaulter, axisName));
-};
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-var AxisModel = ComponentModel.extend({
-  type: 'cartesian2dAxis',
-
-  /**
-   * @type {module:echarts/coord/cartesian/Axis2D}
-   */
-  axis: null,
-
-  /**
-   * @override
-   */
-  init: function () {
-    AxisModel.superApply(this, 'init', arguments);
-    this.resetRange();
-  },
-
-  /**
-   * @override
-   */
-  mergeOption: function () {
-    AxisModel.superApply(this, 'mergeOption', arguments);
-    this.resetRange();
-  },
-
-  /**
-   * @override
-   */
-  restoreData: function () {
-    AxisModel.superApply(this, 'restoreData', arguments);
-    this.resetRange();
-  },
-
-  /**
-   * @override
-   * @return {module:echarts/model/Component}
-   */
-  getCoordSysModel: function () {
-    return this.ecModel.queryComponents({
-      mainType: 'grid',
-      index: this.option.gridIndex,
-      id: this.option.gridId
-    })[0];
-  }
-});
-
-function getAxisType(axisDim, option) {
-  // Default axis with data is category axis
-  return option.type || (option.data ? 'category' : 'value');
-}
-
-merge(AxisModel.prototype, axisModelCommonMixin);
-var extraOption = {
-  // gridIndex: 0,
-  // gridId: '',
-  // Offset is for multiple axis on the same position
-  offset: 0
-};
-axisModelCreator('x', AxisModel, getAxisType, extraOption);
-axisModelCreator('y', AxisModel, getAxisType, extraOption);
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-// Grid 是在有直角坐标系的时候必须要存在的
-// 所以这里也要被 Cartesian2D 依赖
-ComponentModel.extend({
-  type: 'grid',
-  dependencies: ['xAxis', 'yAxis'],
-  layoutMode: 'box',
-
-  /**
-   * @type {module:echarts/coord/cartesian/Grid}
-   */
-  coordinateSystem: null,
-  defaultOption: {
-    show: false,
-    zlevel: 0,
-    z: 0,
-    left: '10%',
-    top: 60,
-    right: '10%',
-    bottom: 60,
-    // If grid size contain label
-    containLabel: false,
-    // width: {totalWidth} - left - right,
-    // height: {totalHeight} - top - bottom,
-    backgroundColor: 'rgba(0,0,0,0)',
-    borderWidth: 1,
-    borderColor: '#ccc'
-  }
-});
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-
-/**
- * Grid is a region which contains at most 4 cartesian systems
- *
- * TODO Default cartesian
- */
-/**
- * Check if the axis is used in the specified grid
- * @inner
- */
-
-function isAxisUsedInTheGrid(axisModel, gridModel, ecModel) {
-  return axisModel.getCoordSysModel() === gridModel;
-}
-
-function Grid(gridModel, ecModel, api) {
-  /**
-   * @type {Object.<string, module:echarts/coord/cartesian/Cartesian2D>}
-   * @private
-   */
-  this._coordsMap = {};
-  /**
-   * @type {Array.<module:echarts/coord/cartesian/Cartesian>}
-   * @private
-   */
-
-  this._coordsList = [];
-  /**
-   * @type {Object.<string, module:echarts/coord/cartesian/Axis2D>}
-   * @private
-   */
-
-  this._axesMap = {};
-  /**
-   * @type {Array.<module:echarts/coord/cartesian/Axis2D>}
-   * @private
-   */
-
-  this._axesList = [];
-
-  this._initCartesian(gridModel, ecModel, api);
-
-  this.model = gridModel;
-}
-
-var gridProto = Grid.prototype;
-gridProto.type = 'grid';
-gridProto.axisPointerEnabled = true;
-
-gridProto.getRect = function () {
-  return this._rect;
-};
-
-gridProto.update = function (ecModel, api) {
-  var axesMap = this._axesMap;
-
-  this._updateScale(ecModel, this.model);
-
-  each$1(axesMap.x, function (xAxis) {
-    niceScaleExtent(xAxis.scale, xAxis.model);
-  });
-  each$1(axesMap.y, function (yAxis) {
-    niceScaleExtent(yAxis.scale, yAxis.model);
-  }); // Key: axisDim_axisIndex, value: boolean, whether onZero target.
-
-  var onZeroRecords = {};
-  each$1(axesMap.x, function (xAxis) {
-    fixAxisOnZero(axesMap, 'y', xAxis, onZeroRecords);
-  });
-  each$1(axesMap.y, function (yAxis) {
-    fixAxisOnZero(axesMap, 'x', yAxis, onZeroRecords);
-  }); // Resize again if containLabel is enabled
-  // FIXME It may cause getting wrong grid size in data processing stage
-
-  this.resize(this.model, api);
-};
-
-function fixAxisOnZero(axesMap, otherAxisDim, axis, onZeroRecords) {
-  axis.getAxesOnZeroOf = function () {
-    // TODO: onZero of multiple axes.
-    return otherAxisOnZeroOf ? [otherAxisOnZeroOf] : [];
-  }; // onZero can not be enabled in these two situations:
-  // 1. When any other axis is a category axis.
-  // 2. When no axis is cross 0 point.
-
-
-  var otherAxes = axesMap[otherAxisDim];
-  var otherAxisOnZeroOf;
-  var axisModel = axis.model;
-  var onZero = axisModel.get('axisLine.onZero');
-  var onZeroAxisIndex = axisModel.get('axisLine.onZeroAxisIndex');
-
-  if (!onZero) {
-    return;
-  } // If target axis is specified.
-
-
-  if (onZeroAxisIndex != null) {
-    if (canOnZeroToAxis(otherAxes[onZeroAxisIndex])) {
-      otherAxisOnZeroOf = otherAxes[onZeroAxisIndex];
-    }
-  } else {
-    // Find the first available other axis.
-    for (var idx in otherAxes) {
-      if (otherAxes.hasOwnProperty(idx) && canOnZeroToAxis(otherAxes[idx]) // Consider that two Y axes on one value axis,
-      // if both onZero, the two Y axes overlap.
-      && !onZeroRecords[getOnZeroRecordKey(otherAxes[idx])]) {
-        otherAxisOnZeroOf = otherAxes[idx];
-        break;
-      }
-    }
-  }
-
-  if (otherAxisOnZeroOf) {
-    onZeroRecords[getOnZeroRecordKey(otherAxisOnZeroOf)] = true;
-  }
-
-  function getOnZeroRecordKey(axis) {
-    return axis.dim + '_' + axis.index;
-  }
-}
-
-function canOnZeroToAxis(axis) {
-  return axis && axis.type !== 'category' && axis.type !== 'time' && ifAxisCrossZero(axis);
-}
-/**
- * Resize the grid
- * @param {module:echarts/coord/cartesian/GridModel} gridModel
- * @param {module:echarts/ExtensionAPI} api
- */
-
-
-gridProto.resize = function (gridModel, api, ignoreContainLabel) {
-  var gridRect = getLayoutRect(gridModel.getBoxLayoutParams(), {
-    width: api.getWidth(),
-    height: api.getHeight()
-  });
-  this._rect = gridRect;
-  var axesList = this._axesList;
-  adjustAxes(); // Minus label size
-
-  if (!ignoreContainLabel && gridModel.get('containLabel')) {
-    each$1(axesList, function (axis) {
-      if (!axis.model.get('axisLabel.inside')) {
-        var labelUnionRect = estimateLabelUnionRect(axis);
-
-        if (labelUnionRect) {
-          var dim = axis.isHorizontal() ? 'height' : 'width';
-          var margin = axis.model.get('axisLabel.margin');
-          gridRect[dim] -= labelUnionRect[dim] + margin;
-
-          if (axis.position === 'top') {
-            gridRect.y += labelUnionRect.height + margin;
-          } else if (axis.position === 'left') {
-            gridRect.x += labelUnionRect.width + margin;
-          }
-        }
-      }
-    });
-    adjustAxes();
-  }
-
-  function adjustAxes() {
-    each$1(axesList, function (axis) {
-      var isHorizontal = axis.isHorizontal();
-      var extent = isHorizontal ? [0, gridRect.width] : [0, gridRect.height];
-      var idx = axis.inverse ? 1 : 0;
-      axis.setExtent(extent[idx], extent[1 - idx]);
-      updateAxisTransform(axis, isHorizontal ? gridRect.x : gridRect.y);
-    });
-  }
-};
-/**
- * @param {string} axisType
- * @param {number} [axisIndex]
- */
-
-
-gridProto.getAxis = function (axisType, axisIndex) {
-  var axesMapOnDim = this._axesMap[axisType];
-
-  if (axesMapOnDim != null) {
-    if (axisIndex == null) {
-      // Find first axis
-      for (var name in axesMapOnDim) {
-        if (axesMapOnDim.hasOwnProperty(name)) {
-          return axesMapOnDim[name];
-        }
-      }
-    }
-
-    return axesMapOnDim[axisIndex];
-  }
-};
-/**
- * @return {Array.<module:echarts/coord/Axis>}
- */
-
-
-gridProto.getAxes = function () {
-  return this._axesList.slice();
-};
-/**
- * Usage:
- *      grid.getCartesian(xAxisIndex, yAxisIndex);
- *      grid.getCartesian(xAxisIndex);
- *      grid.getCartesian(null, yAxisIndex);
- *      grid.getCartesian({xAxisIndex: ..., yAxisIndex: ...});
- *
- * @param {number|Object} [xAxisIndex]
- * @param {number} [yAxisIndex]
- */
-
-
-gridProto.getCartesian = function (xAxisIndex, yAxisIndex) {
-  if (xAxisIndex != null && yAxisIndex != null) {
-    var key = 'x' + xAxisIndex + 'y' + yAxisIndex;
-    return this._coordsMap[key];
-  }
-
-  if (isObject$1(xAxisIndex)) {
-    yAxisIndex = xAxisIndex.yAxisIndex;
-    xAxisIndex = xAxisIndex.xAxisIndex;
-  } // When only xAxisIndex or yAxisIndex given, find its first cartesian.
-
-
-  for (var i = 0, coordList = this._coordsList; i < coordList.length; i++) {
-    if (coordList[i].getAxis('x').index === xAxisIndex || coordList[i].getAxis('y').index === yAxisIndex) {
-      return coordList[i];
-    }
-  }
-};
-
-gridProto.getCartesians = function () {
-  return this._coordsList.slice();
-};
-/**
- * @implements
- * see {module:echarts/CoodinateSystem}
- */
-
-
-gridProto.convertToPixel = function (ecModel, finder, value) {
-  var target = this._findConvertTarget(ecModel, finder);
-
-  return target.cartesian ? target.cartesian.dataToPoint(value) : target.axis ? target.axis.toGlobalCoord(target.axis.dataToCoord(value)) : null;
-};
-/**
- * @implements
- * see {module:echarts/CoodinateSystem}
- */
-
-
-gridProto.convertFromPixel = function (ecModel, finder, value) {
-  var target = this._findConvertTarget(ecModel, finder);
-
-  return target.cartesian ? target.cartesian.pointToData(value) : target.axis ? target.axis.coordToData(target.axis.toLocalCoord(value)) : null;
-};
-/**
- * @inner
- */
-
-
-gridProto._findConvertTarget = function (ecModel, finder) {
-  var seriesModel = finder.seriesModel;
-  var xAxisModel = finder.xAxisModel || seriesModel && seriesModel.getReferringComponents('xAxis')[0];
-  var yAxisModel = finder.yAxisModel || seriesModel && seriesModel.getReferringComponents('yAxis')[0];
-  var gridModel = finder.gridModel;
-  var coordsList = this._coordsList;
-  var cartesian;
-  var axis;
-
-  if (seriesModel) {
-    cartesian = seriesModel.coordinateSystem;
-    indexOf(coordsList, cartesian) < 0 && (cartesian = null);
-  } else if (xAxisModel && yAxisModel) {
-    cartesian = this.getCartesian(xAxisModel.componentIndex, yAxisModel.componentIndex);
-  } else if (xAxisModel) {
-    axis = this.getAxis('x', xAxisModel.componentIndex);
-  } else if (yAxisModel) {
-    axis = this.getAxis('y', yAxisModel.componentIndex);
-  } // Lowest priority.
-  else if (gridModel) {
-      var grid = gridModel.coordinateSystem;
-
-      if (grid === this) {
-        cartesian = this._coordsList[0];
-      }
-    }
-
-  return {
-    cartesian: cartesian,
-    axis: axis
-  };
-};
-/**
- * @implements
- * see {module:echarts/CoodinateSystem}
- */
-
-
-gridProto.containPoint = function (point) {
-  var coord = this._coordsList[0];
-
-  if (coord) {
-    return coord.containPoint(point);
-  }
-};
-/**
- * Initialize cartesian coordinate systems
- * @private
- */
-
-
-gridProto._initCartesian = function (gridModel, ecModel, api) {
-  var axisPositionUsed = {
-    left: false,
-    right: false,
-    top: false,
-    bottom: false
-  };
-  var axesMap = {
-    x: {},
-    y: {}
-  };
-  var axesCount = {
-    x: 0,
-    y: 0
-  }; /// Create axis
-
-  ecModel.eachComponent('xAxis', createAxisCreator('x'), this);
-  ecModel.eachComponent('yAxis', createAxisCreator('y'), this);
-
-  if (!axesCount.x || !axesCount.y) {
-    // Roll back when there no either x or y axis
-    this._axesMap = {};
-    this._axesList = [];
-    return;
-  }
-
-  this._axesMap = axesMap; /// Create cartesian2d
-
-  each$1(axesMap.x, function (xAxis, xAxisIndex) {
-    each$1(axesMap.y, function (yAxis, yAxisIndex) {
-      var key = 'x' + xAxisIndex + 'y' + yAxisIndex;
-      var cartesian = new Cartesian2D(key);
-      cartesian.grid = this;
-      cartesian.model = gridModel;
-      this._coordsMap[key] = cartesian;
-
-      this._coordsList.push(cartesian);
-
-      cartesian.addAxis(xAxis);
-      cartesian.addAxis(yAxis);
-    }, this);
-  }, this);
-
-  function createAxisCreator(axisType) {
-    return function (axisModel, idx) {
-      if (!isAxisUsedInTheGrid(axisModel, gridModel, ecModel)) {
-        return;
-      }
-
-      var axisPosition = axisModel.get('position');
-
-      if (axisType === 'x') {
-        // Fix position
-        if (axisPosition !== 'top' && axisPosition !== 'bottom') {
-          // Default bottom of X
-          axisPosition = 'bottom';
-
-          if (axisPositionUsed[axisPosition]) {
-            axisPosition = axisPosition === 'top' ? 'bottom' : 'top';
-          }
-        }
-      } else {
-        // Fix position
-        if (axisPosition !== 'left' && axisPosition !== 'right') {
-          // Default left of Y
-          axisPosition = 'left';
-
-          if (axisPositionUsed[axisPosition]) {
-            axisPosition = axisPosition === 'left' ? 'right' : 'left';
-          }
-        }
-      }
-
-      axisPositionUsed[axisPosition] = true;
-      var axis = new Axis2D(axisType, createScaleByModel(axisModel), [0, 0], axisModel.get('type'), axisPosition);
-      var isCategory = axis.type === 'category';
-      axis.onBand = isCategory && axisModel.get('boundaryGap');
-      axis.inverse = axisModel.get('inverse'); // Inject axis into axisModel
-
-      axisModel.axis = axis; // Inject axisModel into axis
-
-      axis.model = axisModel; // Inject grid info axis
-
-      axis.grid = this; // Index of axis, can be used as key
-
-      axis.index = idx;
-
-      this._axesList.push(axis);
-
-      axesMap[axisType][idx] = axis;
-      axesCount[axisType]++;
-    };
-  }
-};
-/**
- * Update cartesian properties from series
- * @param  {module:echarts/model/Option} option
- * @private
- */
-
-
-gridProto._updateScale = function (ecModel, gridModel) {
-  // Reset scale
-  each$1(this._axesList, function (axis) {
-    axis.scale.setExtent(Infinity, -Infinity);
-  });
-  ecModel.eachSeries(function (seriesModel) {
-    if (isCartesian2D(seriesModel)) {
-      var axesModels = findAxesModels(seriesModel, ecModel);
-      var xAxisModel = axesModels[0];
-      var yAxisModel = axesModels[1];
-
-      if (!isAxisUsedInTheGrid(xAxisModel, gridModel, ecModel) || !isAxisUsedInTheGrid(yAxisModel, gridModel, ecModel)) {
-        return;
-      }
-
-      var cartesian = this.getCartesian(xAxisModel.componentIndex, yAxisModel.componentIndex);
-      var data = seriesModel.getData();
-      var xAxis = cartesian.getAxis('x');
-      var yAxis = cartesian.getAxis('y');
-
-      if (data.type === 'list') {
-        unionExtent(data, xAxis, seriesModel);
-        unionExtent(data, yAxis, seriesModel);
-      }
-    }
-  }, this);
-
-  function unionExtent(data, axis, seriesModel) {
-    each$1(data.mapDimension(axis.dim, true), function (dim) {
-      axis.scale.unionExtentFromData( // For example, the extent of the orginal dimension
-      // is [0.1, 0.5], the extent of the `stackResultDimension`
-      // is [7, 9], the final extent should not include [0.1, 0.5].
-      data, getStackedDimension(data, dim));
-    });
-  }
-};
-/**
- * @param {string} [dim] 'x' or 'y' or 'auto' or null/undefined
- * @return {Object} {baseAxes: [], otherAxes: []}
- */
-
-
-gridProto.getTooltipAxes = function (dim) {
-  var baseAxes = [];
-  var otherAxes = [];
-  each$1(this.getCartesians(), function (cartesian) {
-    var baseAxis = dim != null && dim !== 'auto' ? cartesian.getAxis(dim) : cartesian.getBaseAxis();
-    var otherAxis = cartesian.getOtherAxis(baseAxis);
-    indexOf(baseAxes, baseAxis) < 0 && baseAxes.push(baseAxis);
-    indexOf(otherAxes, otherAxis) < 0 && otherAxes.push(otherAxis);
-  });
-  return {
-    baseAxes: baseAxes,
-    otherAxes: otherAxes
-  };
-};
-/**
- * @inner
- */
-
-
-function updateAxisTransform(axis, coordBase) {
-  var axisExtent = axis.getExtent();
-  var axisExtentSum = axisExtent[0] + axisExtent[1]; // Fast transform
-
-  axis.toGlobalCoord = axis.dim === 'x' ? function (coord) {
-    return coord + coordBase;
-  } : function (coord) {
-    return axisExtentSum - coord + coordBase;
-  };
-  axis.toLocalCoord = axis.dim === 'x' ? function (coord) {
-    return coord - coordBase;
-  } : function (coord) {
-    return axisExtentSum - coord + coordBase;
-  };
-}
-
-var axesTypes = ['xAxis', 'yAxis'];
-/**
- * @inner
- */
-
-function findAxesModels(seriesModel, ecModel) {
-  return map(axesTypes, function (axisType) {
-    var axisModel = seriesModel.getReferringComponents(axisType)[0];
-    return axisModel;
-  });
-}
-/**
- * @inner
- */
-
-
-function isCartesian2D(seriesModel) {
-  return seriesModel.get('coordinateSystem') === 'cartesian2d';
-}
-
-Grid.create = function (ecModel, api) {
-  var grids = [];
-  ecModel.eachComponent('grid', function (gridModel, idx) {
-    var grid = new Grid(gridModel, ecModel, api);
-    grid.name = 'grid_' + idx; // dataSampling requires axis extent, so resize
-    // should be performed in create stage.
-
-    grid.resize(gridModel, api, true);
-    gridModel.coordinateSystem = grid;
-    grids.push(grid);
-  }); // Inject the coordinateSystems into seriesModel
-
-  ecModel.eachSeries(function (seriesModel) {
-    if (!isCartesian2D(seriesModel)) {
-      return;
-    }
-
-    var axesModels = findAxesModels(seriesModel, ecModel);
-    var xAxisModel = axesModels[0];
-    var yAxisModel = axesModels[1];
-    var gridModel = xAxisModel.getCoordSysModel();
-    var grid = gridModel.coordinateSystem;
-    seriesModel.coordinateSystem = grid.getCartesian(xAxisModel.componentIndex, yAxisModel.componentIndex);
-  });
-  return grids;
-}; // For deciding which dimensions to use when creating list data
-
-
-Grid.dimensions = Grid.prototype.dimensions = Cartesian2D.prototype.dimensions;
-CoordinateSystemManager.register('cartesian2d', Grid);
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-var BaseBarSeries = SeriesModel.extend({
-  type: 'series.__base_bar__',
-  getInitialData: function (option, ecModel) {
-    return createListFromArray(this.getSource(), this);
-  },
-  getMarkerPosition: function (value) {
-    var coordSys = this.coordinateSystem;
-
-    if (coordSys) {
-      // PENDING if clamp ?
-      var pt = coordSys.dataToPoint(coordSys.clampData(value));
-      var data = this.getData();
-      var offset = data.getLayout('offset');
-      var size = data.getLayout('size');
-      var offsetIndex = coordSys.getBaseAxis().isHorizontal() ? 0 : 1;
-      pt[offsetIndex] += offset + size / 2;
-      return pt;
-    }
-
-    return [NaN, NaN];
-  },
-  defaultOption: {
-    zlevel: 0,
-    // 一级层叠
-    z: 2,
-    // 二级层叠
-    coordinateSystem: 'cartesian2d',
-    legendHoverLink: true,
-    // stack: null
-    // Cartesian coordinate system
-    // xAxisIndex: 0,
-    // yAxisIndex: 0,
-    // 最小高度改为0
-    barMinHeight: 0,
-    // 最小角度为0，仅对极坐标系下的柱状图有效
-    barMinAngle: 0,
-    // cursor: null,
-    large: false,
-    largeThreshold: 400,
-    progressive: 3e3,
-    progressiveChunkMode: 'mod',
-    // barMaxWidth: null,
-    // 默认自适应
-    // barWidth: null,
-    // 柱间距离，默认为柱形宽度的30%，可设固定值
-    // barGap: '30%',
-    // 类目间柱形距离，默认为类目间距的20%，可设固定值
-    // barCategoryGap: '20%',
-    // label: {
-    //      show: false
-    // },
-    itemStyle: {},
-    emphasis: {}
-  }
-});
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-BaseBarSeries.extend({
-  type: 'series.bar',
-  dependencies: ['grid', 'polar'],
-  brushSelector: 'rect',
-
-  /**
-   * @override
-   */
-  getProgressive: function () {
-    // Do not support progressive in normal mode.
-    return this.get('large') ? this.get('progressive') : false;
-  },
-
-  /**
-   * @override
-   */
-  getProgressiveThreshold: function () {
-    // Do not support progressive in normal mode.
-    var progressiveThreshold = this.get('progressiveThreshold');
-    var largeThreshold = this.get('largeThreshold');
-
-    if (largeThreshold > progressiveThreshold) {
-      progressiveThreshold = largeThreshold;
-    }
-
-    return progressiveThreshold;
-  }
-});
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-/**
- * @param {module:echarts/data/List} data
- * @param {number} dataIndex
- * @return {string} label string. Not null/undefined
- */
-
-function getDefaultLabel(data, dataIndex) {
-  var labelDims = data.mapDimension('defaultedLabel', true);
-  var len = labelDims.length; // Simple optimization (in lots of cases, label dims length is 1)
-
-  if (len === 1) {
-    return retrieveRawValue(data, dataIndex, labelDims[0]);
-  } else if (len) {
-    var vals = [];
-
-    for (var i = 0; i < labelDims.length; i++) {
-      var val = retrieveRawValue(data, dataIndex, labelDims[i]);
-      vals.push(val);
-    }
-
-    return vals.join(' ');
-  }
-}
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-function setLabel(normalStyle, hoverStyle, itemModel, color, seriesModel, dataIndex, labelPositionOutside) {
-  var labelModel = itemModel.getModel('label');
-  var hoverLabelModel = itemModel.getModel('emphasis.label');
-  setLabelStyle(normalStyle, hoverStyle, labelModel, hoverLabelModel, {
-    labelFetcher: seriesModel,
-    labelDataIndex: dataIndex,
-    defaultText: getDefaultLabel(seriesModel.getData(), dataIndex),
-    isRectText: true,
-    autoColor: color
-  });
-  fixPosition(normalStyle);
-  fixPosition(hoverStyle);
-}
-
-function fixPosition(style, labelPositionOutside) {
-  if (style.textPosition === 'outside') {
-    style.textPosition = labelPositionOutside;
-  }
-}
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-var getBarItemStyle = makeStyleMapper([['fill', 'color'], ['stroke', 'borderColor'], ['lineWidth', 'borderWidth'], // Compatitable with 2
-['stroke', 'barBorderColor'], ['lineWidth', 'barBorderWidth'], ['opacity'], ['shadowBlur'], ['shadowOffsetX'], ['shadowOffsetY'], ['shadowColor']]);
-var barItemStyle = {
-  getBarItemStyle: function (excludes) {
-    var style = getBarItemStyle(this, excludes);
-
-    if (this.getBorderLineDash) {
-      var lineDash = this.getBorderLineDash();
-      lineDash && (style.lineDash = lineDash);
-    }
-
-    return style;
-  }
-};
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-var BAR_BORDER_WIDTH_QUERY = ['itemStyle', 'barBorderWidth']; // FIXME
-// Just for compatible with ec2.
-
-extend(Model.prototype, barItemStyle);
-extendChartView({
-  type: 'bar',
-  render: function (seriesModel, ecModel, api) {
-    this._updateDrawMode(seriesModel);
-
-    var coordinateSystemType = seriesModel.get('coordinateSystem');
-
-    if (coordinateSystemType === 'cartesian2d' || coordinateSystemType === 'polar') {
-      this._isLargeDraw ? this._renderLarge(seriesModel, ecModel, api) : this._renderNormal(seriesModel, ecModel, api);
-    } else {}
-
-    return this.group;
-  },
-  incrementalPrepareRender: function (seriesModel, ecModel, api) {
-    this._clear();
-
-    this._updateDrawMode(seriesModel);
-  },
-  incrementalRender: function (params, seriesModel, ecModel, api) {
-    // Do not support progressive in normal mode.
-    this._incrementalRenderLarge(params, seriesModel);
-  },
-  _updateDrawMode: function (seriesModel) {
-    var isLargeDraw = seriesModel.pipelineContext.large;
-
-    if (this._isLargeDraw == null || isLargeDraw ^ this._isLargeDraw) {
-      this._isLargeDraw = isLargeDraw;
-
-      this._clear();
-    }
-  },
-  _renderNormal: function (seriesModel, ecModel, api) {
-    var group = this.group;
-    var data = seriesModel.getData();
-    var oldData = this._data;
-    var coord = seriesModel.coordinateSystem;
-    var baseAxis = coord.getBaseAxis();
-    var isHorizontalOrRadial;
-
-    if (coord.type === 'cartesian2d') {
-      isHorizontalOrRadial = baseAxis.isHorizontal();
-    } else if (coord.type === 'polar') {
-      isHorizontalOrRadial = baseAxis.dim === 'angle';
-    }
-
-    var animationModel = seriesModel.isAnimationEnabled() ? seriesModel : null;
-    data.diff(oldData).add(function (dataIndex) {
-      if (!data.hasValue(dataIndex)) {
-        return;
-      }
-
-      var itemModel = data.getItemModel(dataIndex);
-      var layout = getLayout[coord.type](data, dataIndex, itemModel);
-      var el = elementCreator[coord.type](data, dataIndex, itemModel, layout, isHorizontalOrRadial, animationModel);
-      data.setItemGraphicEl(dataIndex, el);
-      group.add(el);
-      updateStyle(el, data, dataIndex, itemModel, layout, seriesModel, isHorizontalOrRadial, coord.type === 'polar');
-    }).update(function (newIndex, oldIndex) {
-      var el = oldData.getItemGraphicEl(oldIndex);
-
-      if (!data.hasValue(newIndex)) {
-        group.remove(el);
-        return;
-      }
-
-      var itemModel = data.getItemModel(newIndex);
-      var layout = getLayout[coord.type](data, newIndex, itemModel);
-
-      if (el) {
-        updateProps(el, {
-          shape: layout
-        }, animationModel, newIndex);
-      } else {
-        el = elementCreator[coord.type](data, newIndex, itemModel, layout, isHorizontalOrRadial, animationModel, true);
-      }
-
-      data.setItemGraphicEl(newIndex, el); // Add back
-
-      group.add(el);
-      updateStyle(el, data, newIndex, itemModel, layout, seriesModel, isHorizontalOrRadial, coord.type === 'polar');
-    }).remove(function (dataIndex) {
-      var el = oldData.getItemGraphicEl(dataIndex);
-
-      if (coord.type === 'cartesian2d') {
-        el && removeRect(dataIndex, animationModel, el);
-      } else {
-        el && removeSector(dataIndex, animationModel, el);
-      }
-    }).execute();
-    this._data = data;
-  },
-  _renderLarge: function (seriesModel, ecModel, api) {
-    this._clear();
-
-    createLarge(seriesModel, this.group);
-  },
-  _incrementalRenderLarge: function (params, seriesModel) {
-    createLarge(seriesModel, this.group, true);
-  },
-  dispose: noop,
-  remove: function (ecModel) {
-    this._clear(ecModel);
-  },
-  _clear: function (ecModel) {
-    var group = this.group;
-    var data = this._data;
-
-    if (ecModel && ecModel.get('animation') && data && !this._isLargeDraw) {
-      data.eachItemGraphicEl(function (el) {
-        if (el.type === 'sector') {
-          removeSector(el.dataIndex, ecModel, el);
-        } else {
-          removeRect(el.dataIndex, ecModel, el);
-        }
-      });
-    } else {
-      group.removeAll();
-    }
-
-    this._data = null;
-  }
-});
-var elementCreator = {
-  cartesian2d: function (data, dataIndex, itemModel, layout, isHorizontal, animationModel, isUpdate) {
-    var rect = new Rect({
-      shape: extend({}, layout)
-    }); // Animation
-
-    if (animationModel) {
-      var rectShape = rect.shape;
-      var animateProperty = isHorizontal ? 'height' : 'width';
-      var animateTarget = {};
-      rectShape[animateProperty] = 0;
-      animateTarget[animateProperty] = layout[animateProperty];
-      graphic[isUpdate ? 'updateProps' : 'initProps'](rect, {
-        shape: animateTarget
-      }, animationModel, dataIndex);
-    }
-
-    return rect;
-  },
-  polar: function (data, dataIndex, itemModel, layout, isRadial, animationModel, isUpdate) {
-    // Keep the same logic with bar in catesion: use end value to control
-    // direction. Notice that if clockwise is true (by default), the sector
-    // will always draw clockwisely, no matter whether endAngle is greater
-    // or less than startAngle.
-    var clockwise = layout.startAngle < layout.endAngle;
-    var sector = new Sector({
-      shape: defaults({
-        clockwise: clockwise
-      }, layout)
-    }); // Animation
-
-    if (animationModel) {
-      var sectorShape = sector.shape;
-      var animateProperty = isRadial ? 'r' : 'endAngle';
-      var animateTarget = {};
-      sectorShape[animateProperty] = isRadial ? 0 : layout.startAngle;
-      animateTarget[animateProperty] = layout[animateProperty];
-      graphic[isUpdate ? 'updateProps' : 'initProps'](sector, {
-        shape: animateTarget
-      }, animationModel, dataIndex);
-    }
-
-    return sector;
-  }
-};
-
-function removeRect(dataIndex, animationModel, el) {
-  // Not show text when animating
-  el.style.text = null;
-  updateProps(el, {
-    shape: {
-      width: 0
-    }
-  }, animationModel, dataIndex, function () {
-    el.parent && el.parent.remove(el);
-  });
-}
-
-function removeSector(dataIndex, animationModel, el) {
-  // Not show text when animating
-  el.style.text = null;
-  updateProps(el, {
-    shape: {
-      r: el.shape.r0
-    }
-  }, animationModel, dataIndex, function () {
-    el.parent && el.parent.remove(el);
-  });
-}
-
-var getLayout = {
-  cartesian2d: function (data, dataIndex, itemModel) {
-    var layout = data.getItemLayout(dataIndex);
-    var fixedLineWidth = getLineWidth(itemModel, layout); // fix layout with lineWidth
-
-    var signX = layout.width > 0 ? 1 : -1;
-    var signY = layout.height > 0 ? 1 : -1;
-    return {
-      x: layout.x + signX * fixedLineWidth / 2,
-      y: layout.y + signY * fixedLineWidth / 2,
-      width: layout.width - signX * fixedLineWidth,
-      height: layout.height - signY * fixedLineWidth
-    };
-  },
-  polar: function (data, dataIndex, itemModel) {
-    var layout = data.getItemLayout(dataIndex);
-    return {
-      cx: layout.cx,
-      cy: layout.cy,
-      r0: layout.r0,
-      r: layout.r,
-      startAngle: layout.startAngle,
-      endAngle: layout.endAngle
-    };
-  }
-};
-
-function updateStyle(el, data, dataIndex, itemModel, layout, seriesModel, isHorizontal, isPolar) {
-  var color = data.getItemVisual(dataIndex, 'color');
-  var opacity = data.getItemVisual(dataIndex, 'opacity');
-  var itemStyleModel = itemModel.getModel('itemStyle');
-  var hoverStyle = itemModel.getModel('emphasis.itemStyle').getBarItemStyle();
-
-  if (!isPolar) {
-    el.setShape('r', itemStyleModel.get('barBorderRadius') || 0);
-  }
-
-  el.useStyle(defaults({
-    fill: color,
-    opacity: opacity
-  }, itemStyleModel.getBarItemStyle()));
-  var cursorStyle = itemModel.getShallow('cursor');
-  cursorStyle && el.attr('cursor', cursorStyle);
-  var labelPositionOutside = isHorizontal ? layout.height > 0 ? 'bottom' : 'top' : layout.width > 0 ? 'left' : 'right';
-
-  if (!isPolar) {
-    setLabel(el.style, hoverStyle, itemModel, color, seriesModel, dataIndex, labelPositionOutside);
-  }
-
-  setHoverStyle(el, hoverStyle);
-} // In case width or height are too small.
-
-
-function getLineWidth(itemModel, rawLayout) {
-  var lineWidth = itemModel.get(BAR_BORDER_WIDTH_QUERY) || 0;
-  return Math.min(lineWidth, Math.abs(rawLayout.width), Math.abs(rawLayout.height));
-}
-
-var LargePath = Path.extend({
-  type: 'largeBar',
-  shape: {
-    points: []
-  },
-  buildPath: function (ctx, shape) {
-    // Drawing lines is more efficient than drawing
-    // a whole line or drawing rects.
-    var points = shape.points;
-    var startPoint = this.__startPoint;
-    var valueIdx = this.__valueIdx;
-
-    for (var i = 0; i < points.length; i += 2) {
-      startPoint[this.__valueIdx] = points[i + valueIdx];
-      ctx.moveTo(startPoint[0], startPoint[1]);
-      ctx.lineTo(points[i], points[i + 1]);
-    }
-  }
-});
-
-function createLarge(seriesModel, group, incremental) {
-  // TODO support polar
-  var data = seriesModel.getData();
-  var startPoint = [];
-  var valueIdx = data.getLayout('valueAxisHorizontal') ? 1 : 0;
-  startPoint[1 - valueIdx] = data.getLayout('valueAxisStart');
-  var el = new LargePath({
-    shape: {
-      points: data.getLayout('largePoints')
-    },
-    incremental: !!incremental,
-    __startPoint: startPoint,
-    __valueIdx: valueIdx
-  });
-  group.add(el);
-  setLargeStyle(el, seriesModel, data);
-}
-
-function setLargeStyle(el, seriesModel, data) {
-  var borderColor = data.getVisual('borderColor') || data.getVisual('color');
-  var itemStyle = seriesModel.getModel('itemStyle').getItemStyle(['color', 'borderColor']);
-  el.useStyle(itemStyle);
-  el.style.fill = null;
-  el.style.stroke = borderColor;
-  el.style.lineWidth = data.getLayout('barWidth');
-}
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-var PI$2 = Math.PI;
-
-function makeAxisEventDataBase(axisModel) {
-  var eventData = {
-    componentType: axisModel.mainType,
-    componentIndex: axisModel.componentIndex
-  };
-  eventData[axisModel.mainType + 'Index'] = axisModel.componentIndex;
-  return eventData;
-}
-/**
- * A final axis is translated and rotated from a "standard axis".
- * So opt.position and opt.rotation is required.
- *
- * A standard axis is and axis from [0, 0] to [0, axisExtent[1]],
- * for example: (0, 0) ------------> (0, 50)
- *
- * nameDirection or tickDirection or labelDirection is 1 means tick
- * or label is below the standard axis, whereas is -1 means above
- * the standard axis. labelOffset means offset between label and axis,
- * which is useful when 'onZero', where axisLabel is in the grid and
- * label in outside grid.
- *
- * Tips: like always,
- * positive rotation represents anticlockwise, and negative rotation
- * represents clockwise.
- * The direction of position coordinate is the same as the direction
- * of screen coordinate.
- *
- * Do not need to consider axis 'inverse', which is auto processed by
- * axis extent.
- *
- * @param {module:zrender/container/Group} group
- * @param {Object} axisModel
- * @param {Object} opt Standard axis parameters.
- * @param {Array.<number>} opt.position [x, y]
- * @param {number} opt.rotation by radian
- * @param {number} [opt.nameDirection=1] 1 or -1 Used when nameLocation is 'middle' or 'center'.
- * @param {number} [opt.tickDirection=1] 1 or -1
- * @param {number} [opt.labelDirection=1] 1 or -1
- * @param {number} [opt.labelOffset=0] Usefull when onZero.
- * @param {string} [opt.axisLabelShow] default get from axisModel.
- * @param {string} [opt.axisName] default get from axisModel.
- * @param {number} [opt.axisNameAvailableWidth]
- * @param {number} [opt.labelRotate] by degree, default get from axisModel.
- * @param {number} [opt.strokeContainThreshold] Default label interval when label
- * @param {number} [opt.nameTruncateMaxWidth]
- */
-
-
-var AxisBuilder = function (axisModel, opt) {
-  /**
-   * @readOnly
-   */
-  this.opt = opt;
-  /**
-   * @readOnly
-   */
-
-  this.axisModel = axisModel; // Default value
-
-  defaults(opt, {
-    labelOffset: 0,
-    nameDirection: 1,
-    tickDirection: 1,
-    labelDirection: 1,
-    silent: true
-  });
-  /**
-   * @readOnly
-   */
-
-  this.group = new Group(); // FIXME Not use a seperate text group?
-
-  var dumbGroup = new Group({
-    position: opt.position.slice(),
-    rotation: opt.rotation
-  }); // this.group.add(dumbGroup);
-  // this._dumbGroup = dumbGroup;
-
-  dumbGroup.updateTransform();
-  this._transform = dumbGroup.transform;
-  this._dumbGroup = dumbGroup;
-};
-
-AxisBuilder.prototype = {
-  constructor: AxisBuilder,
-  hasBuilder: function (name) {
-    return !!builders[name];
-  },
-  add: function (name) {
-    builders[name].call(this);
-  },
-  getGroup: function () {
-    return this.group;
-  }
-};
-var builders = {
-  /**
-   * @private
-   */
-  axisLine: function () {
-    var opt = this.opt;
-    var axisModel = this.axisModel;
-
-    if (!axisModel.get('axisLine.show')) {
-      return;
-    }
-
-    var extent = this.axisModel.axis.getExtent();
-    var matrix = this._transform;
-    var pt1 = [extent[0], 0];
-    var pt2 = [extent[1], 0];
-
-    if (matrix) {
-      applyTransform(pt1, pt1, matrix);
-      applyTransform(pt2, pt2, matrix);
-    }
-
-    var lineStyle = extend({
-      lineCap: 'round'
-    }, axisModel.getModel('axisLine.lineStyle').getLineStyle());
-    this.group.add(new Line(subPixelOptimizeLine({
-      // Id for animation
-      anid: 'line',
-      shape: {
-        x1: pt1[0],
-        y1: pt1[1],
-        x2: pt2[0],
-        y2: pt2[1]
-      },
-      style: lineStyle,
-      strokeContainThreshold: opt.strokeContainThreshold || 5,
-      silent: true,
-      z2: 1
-    })));
-    var arrows = axisModel.get('axisLine.symbol');
-    var arrowSize = axisModel.get('axisLine.symbolSize');
-    var arrowOffset = axisModel.get('axisLine.symbolOffset') || 0;
-
-    if (typeof arrowOffset === 'number') {
-      arrowOffset = [arrowOffset, arrowOffset];
-    }
-
-    if (arrows != null) {
-      if (typeof arrows === 'string') {
-        // Use the same arrow for start and end point
-        arrows = [arrows, arrows];
-      }
-
-      if (typeof arrowSize === 'string' || typeof arrowSize === 'number') {
-        // Use the same size for width and height
-        arrowSize = [arrowSize, arrowSize];
-      }
-
-      var symbolWidth = arrowSize[0];
-      var symbolHeight = arrowSize[1];
-      each$1([{
-        rotate: opt.rotation + Math.PI / 2,
-        offset: arrowOffset[0],
-        r: 0
-      }, {
-        rotate: opt.rotation - Math.PI / 2,
-        offset: arrowOffset[1],
-        r: Math.sqrt((pt1[0] - pt2[0]) * (pt1[0] - pt2[0]) + (pt1[1] - pt2[1]) * (pt1[1] - pt2[1]))
-      }], function (point, index) {
-        if (arrows[index] !== 'none' && arrows[index] != null) {
-          var symbol = createSymbol(arrows[index], -symbolWidth / 2, -symbolHeight / 2, symbolWidth, symbolHeight, lineStyle.stroke, true); // Calculate arrow position with offset
-
-          var r = point.r + point.offset;
-          var pos = [pt1[0] + r * Math.cos(opt.rotation), pt1[1] - r * Math.sin(opt.rotation)];
-          symbol.attr({
-            rotation: point.rotate,
-            position: pos,
-            silent: true,
-            z2: 11
-          });
-          this.group.add(symbol);
-        }
-      }, this);
-    }
-  },
-
-  /**
-   * @private
-   */
-  axisTickLabel: function () {
-    var axisModel = this.axisModel;
-    var opt = this.opt;
-    var tickEls = buildAxisTick(this, axisModel, opt);
-    var labelEls = buildAxisLabel(this, axisModel, opt);
-    fixMinMaxLabelShow(axisModel, labelEls, tickEls);
-  },
-
-  /**
-   * @private
-   */
-  axisName: function () {
-    var opt = this.opt;
-    var axisModel = this.axisModel;
-    var name = retrieve(opt.axisName, axisModel.get('name'));
-
-    if (!name) {
-      return;
-    }
-
-    var nameLocation = axisModel.get('nameLocation');
-    var nameDirection = opt.nameDirection;
-    var textStyleModel = axisModel.getModel('nameTextStyle');
-    var gap = axisModel.get('nameGap') || 0;
-    var extent = this.axisModel.axis.getExtent();
-    var gapSignal = extent[0] > extent[1] ? -1 : 1;
-    var pos = [nameLocation === 'start' ? extent[0] - gapSignal * gap : nameLocation === 'end' ? extent[1] + gapSignal * gap : (extent[0] + extent[1]) / 2, // 'middle'
-    // Reuse labelOffset.
-    isNameLocationCenter(nameLocation) ? opt.labelOffset + nameDirection * gap : 0];
-    var labelLayout;
-    var nameRotation = axisModel.get('nameRotate');
-
-    if (nameRotation != null) {
-      nameRotation = nameRotation * PI$2 / 180; // To radian.
-    }
-
-    var axisNameAvailableWidth;
-
-    if (isNameLocationCenter(nameLocation)) {
-      labelLayout = innerTextLayout(opt.rotation, nameRotation != null ? nameRotation : opt.rotation, // Adapt to axis.
-      nameDirection);
-    } else {
-      labelLayout = endTextLayout(opt, nameLocation, nameRotation || 0, extent);
-      axisNameAvailableWidth = opt.axisNameAvailableWidth;
-
-      if (axisNameAvailableWidth != null) {
-        axisNameAvailableWidth = Math.abs(axisNameAvailableWidth / Math.sin(labelLayout.rotation));
-        !isFinite(axisNameAvailableWidth) && (axisNameAvailableWidth = null);
-      }
-    }
-
-    var textFont = textStyleModel.getFont();
-    var truncateOpt = axisModel.get('nameTruncate', true) || {};
-    var ellipsis = truncateOpt.ellipsis;
-    var maxWidth = retrieve(opt.nameTruncateMaxWidth, truncateOpt.maxWidth, axisNameAvailableWidth); // FIXME
-    // truncate rich text? (consider performance)
-
-    var truncatedText = ellipsis != null && maxWidth != null ? truncateText$1(name, maxWidth, textFont, ellipsis, {
-      minChar: 2,
-      placeholder: truncateOpt.placeholder
-    }) : name;
-    var tooltipOpt = axisModel.get('tooltip', true);
-    var mainType = axisModel.mainType;
-    var formatterParams = {
-      componentType: mainType,
-      name: name,
-      $vars: ['name']
-    };
-    formatterParams[mainType + 'Index'] = axisModel.componentIndex;
-    var textEl = new Text({
-      // Id for animation
-      anid: 'name',
-      __fullText: name,
-      __truncatedText: truncatedText,
-      position: pos,
-      rotation: labelLayout.rotation,
-      silent: isSilent(axisModel),
-      z2: 1,
-      tooltip: tooltipOpt && tooltipOpt.show ? extend({
-        content: name,
-        formatter: function () {
-          return name;
-        },
-        formatterParams: formatterParams
-      }, tooltipOpt) : null
-    });
-    setTextStyle(textEl.style, textStyleModel, {
-      text: truncatedText,
-      textFont: textFont,
-      textFill: textStyleModel.getTextColor() || axisModel.get('axisLine.lineStyle.color'),
-      textAlign: labelLayout.textAlign,
-      textVerticalAlign: labelLayout.textVerticalAlign
-    });
-
-    if (axisModel.get('triggerEvent')) {
-      textEl.eventData = makeAxisEventDataBase(axisModel);
-      textEl.eventData.targetType = 'axisName';
-      textEl.eventData.name = name;
-    } // FIXME
-
-
-    this._dumbGroup.add(textEl);
-
-    textEl.updateTransform();
-    this.group.add(textEl);
-    textEl.decomposeTransform();
-  }
-};
-/**
- * @public
- * @static
- * @param {Object} opt
- * @param {number} axisRotation in radian
- * @param {number} textRotation in radian
- * @param {number} direction
- * @return {Object} {
- *  rotation, // according to axis
- *  textAlign,
- *  textVerticalAlign
- * }
- */
-
-var innerTextLayout = AxisBuilder.innerTextLayout = function (axisRotation, textRotation, direction) {
-  var rotationDiff = remRadian(textRotation - axisRotation);
-  var textAlign;
-  var textVerticalAlign;
-
-  if (isRadianAroundZero(rotationDiff)) {
-    // Label is parallel with axis line.
-    textVerticalAlign = direction > 0 ? 'top' : 'bottom';
-    textAlign = 'center';
-  } else if (isRadianAroundZero(rotationDiff - PI$2)) {
-    // Label is inverse parallel with axis line.
-    textVerticalAlign = direction > 0 ? 'bottom' : 'top';
-    textAlign = 'center';
-  } else {
-    textVerticalAlign = 'middle';
-
-    if (rotationDiff > 0 && rotationDiff < PI$2) {
-      textAlign = direction > 0 ? 'right' : 'left';
-    } else {
-      textAlign = direction > 0 ? 'left' : 'right';
-    }
-  }
-
-  return {
-    rotation: rotationDiff,
-    textAlign: textAlign,
-    textVerticalAlign: textVerticalAlign
-  };
-};
-
-function endTextLayout(opt, textPosition, textRotate, extent) {
-  var rotationDiff = remRadian(textRotate - opt.rotation);
-  var textAlign;
-  var textVerticalAlign;
-  var inverse = extent[0] > extent[1];
-  var onLeft = textPosition === 'start' && !inverse || textPosition !== 'start' && inverse;
-
-  if (isRadianAroundZero(rotationDiff - PI$2 / 2)) {
-    textVerticalAlign = onLeft ? 'bottom' : 'top';
-    textAlign = 'center';
-  } else if (isRadianAroundZero(rotationDiff - PI$2 * 1.5)) {
-    textVerticalAlign = onLeft ? 'top' : 'bottom';
-    textAlign = 'center';
-  } else {
-    textVerticalAlign = 'middle';
-
-    if (rotationDiff < PI$2 * 1.5 && rotationDiff > PI$2 / 2) {
-      textAlign = onLeft ? 'left' : 'right';
-    } else {
-      textAlign = onLeft ? 'right' : 'left';
-    }
-  }
-
-  return {
-    rotation: rotationDiff,
-    textAlign: textAlign,
-    textVerticalAlign: textVerticalAlign
-  };
-}
-
-function isSilent(axisModel) {
-  var tooltipOpt = axisModel.get('tooltip');
-  return axisModel.get('silent') // Consider mouse cursor, add these restrictions.
-  || !(axisModel.get('triggerEvent') || tooltipOpt && tooltipOpt.show);
-}
-
-function fixMinMaxLabelShow(axisModel, labelEls, tickEls) {
-  if (shouldShowAllLabels(axisModel.axis)) {
-    return;
-  } // If min or max are user set, we need to check
-  // If the tick on min(max) are overlap on their neighbour tick
-  // If they are overlapped, we need to hide the min(max) tick label
-
-
-  var showMinLabel = axisModel.get('axisLabel.showMinLabel');
-  var showMaxLabel = axisModel.get('axisLabel.showMaxLabel'); // FIXME
-  // Have not consider onBand yet, where tick els is more than label els.
-
-  labelEls = labelEls || [];
-  tickEls = tickEls || [];
-  var firstLabel = labelEls[0];
-  var nextLabel = labelEls[1];
-  var lastLabel = labelEls[labelEls.length - 1];
-  var prevLabel = labelEls[labelEls.length - 2];
-  var firstTick = tickEls[0];
-  var nextTick = tickEls[1];
-  var lastTick = tickEls[tickEls.length - 1];
-  var prevTick = tickEls[tickEls.length - 2];
-
-  if (showMinLabel === false) {
-    ignoreEl(firstLabel);
-    ignoreEl(firstTick);
-  } else if (isTwoLabelOverlapped(firstLabel, nextLabel)) {
-    if (showMinLabel) {
-      ignoreEl(nextLabel);
-      ignoreEl(nextTick);
-    } else {
-      ignoreEl(firstLabel);
-      ignoreEl(firstTick);
-    }
-  }
-
-  if (showMaxLabel === false) {
-    ignoreEl(lastLabel);
-    ignoreEl(lastTick);
-  } else if (isTwoLabelOverlapped(prevLabel, lastLabel)) {
-    if (showMaxLabel) {
-      ignoreEl(prevLabel);
-      ignoreEl(prevTick);
-    } else {
-      ignoreEl(lastLabel);
-      ignoreEl(lastTick);
-    }
-  }
-}
-
-function ignoreEl(el) {
-  el && (el.ignore = true);
-}
-
-function isTwoLabelOverlapped(current, next, labelLayout) {
-  // current and next has the same rotation.
-  var firstRect = current && current.getBoundingRect().clone();
-  var nextRect = next && next.getBoundingRect().clone();
-
-  if (!firstRect || !nextRect) {
-    return;
-  } // When checking intersect of two rotated labels, we use mRotationBack
-  // to avoid that boundingRect is enlarge when using `boundingRect.applyTransform`.
-
-
-  var mRotationBack = identity([]);
-  rotate(mRotationBack, mRotationBack, -current.rotation);
-  firstRect.applyTransform(mul$1([], mRotationBack, current.getLocalTransform()));
-  nextRect.applyTransform(mul$1([], mRotationBack, next.getLocalTransform()));
-  return firstRect.intersect(nextRect);
-}
-
-function isNameLocationCenter(nameLocation) {
-  return nameLocation === 'middle' || nameLocation === 'center';
-}
-
-function buildAxisTick(axisBuilder, axisModel, opt) {
-  var axis = axisModel.axis;
-
-  if (!axisModel.get('axisTick.show') || axis.scale.isBlank()) {
-    return;
-  }
-
-  var tickModel = axisModel.getModel('axisTick');
-  var lineStyleModel = tickModel.getModel('lineStyle');
-  var tickLen = tickModel.get('length');
-  var ticksCoords = axis.getTicksCoords();
-  var pt1 = [];
-  var pt2 = [];
-  var matrix = axisBuilder._transform;
-  var tickEls = [];
-
-  for (var i = 0; i < ticksCoords.length; i++) {
-    var tickCoord = ticksCoords[i].coord;
-    pt1[0] = tickCoord;
-    pt1[1] = 0;
-    pt2[0] = tickCoord;
-    pt2[1] = opt.tickDirection * tickLen;
-
-    if (matrix) {
-      applyTransform(pt1, pt1, matrix);
-      applyTransform(pt2, pt2, matrix);
-    } // Tick line, Not use group transform to have better line draw
-
-
-    var tickEl = new Line(subPixelOptimizeLine({
-      // Id for animation
-      anid: 'tick_' + ticksCoords[i].tickValue,
-      shape: {
-        x1: pt1[0],
-        y1: pt1[1],
-        x2: pt2[0],
-        y2: pt2[1]
-      },
-      style: defaults(lineStyleModel.getLineStyle(), {
-        stroke: axisModel.get('axisLine.lineStyle.color')
-      }),
-      z2: 2,
-      silent: true
-    }));
-    axisBuilder.group.add(tickEl);
-    tickEls.push(tickEl);
-  }
-
-  return tickEls;
-}
-
-function buildAxisLabel(axisBuilder, axisModel, opt) {
-  var axis = axisModel.axis;
-  var show = retrieve(opt.axisLabelShow, axisModel.get('axisLabel.show'));
-
-  if (!show || axis.scale.isBlank()) {
-    return;
-  }
-
-  var labelModel = axisModel.getModel('axisLabel');
-  var labelMargin = labelModel.get('margin');
-  var labels = axis.getViewLabels(); // Special label rotate.
-
-  var labelRotation = (retrieve(opt.labelRotate, labelModel.get('rotate')) || 0) * PI$2 / 180;
-  var labelLayout = innerTextLayout(opt.rotation, labelRotation, opt.labelDirection);
-  var rawCategoryData = axisModel.getCategories(true);
-  var labelEls = [];
-  var silent = isSilent(axisModel);
-  var triggerEvent = axisModel.get('triggerEvent');
-  each$1(labels, function (labelItem, index) {
-    var tickValue = labelItem.tickValue;
-    var formattedLabel = labelItem.formattedLabel;
-    var rawLabel = labelItem.rawLabel;
-    var itemLabelModel = labelModel;
-
-    if (rawCategoryData && rawCategoryData[tickValue] && rawCategoryData[tickValue].textStyle) {
-      itemLabelModel = new Model(rawCategoryData[tickValue].textStyle, labelModel, axisModel.ecModel);
-    }
-
-    var textColor = itemLabelModel.getTextColor() || axisModel.get('axisLine.lineStyle.color');
-    var tickCoord = axis.dataToCoord(tickValue);
-    var pos = [tickCoord, opt.labelOffset + opt.labelDirection * labelMargin];
-    var textEl = new Text({
-      // Id for animation
-      anid: 'label_' + tickValue,
-      position: pos,
-      rotation: labelLayout.rotation,
-      silent: silent,
-      z2: 10
-    });
-    setTextStyle(textEl.style, itemLabelModel, {
-      text: formattedLabel,
-      textAlign: itemLabelModel.getShallow('align', true) || labelLayout.textAlign,
-      textVerticalAlign: itemLabelModel.getShallow('verticalAlign', true) || itemLabelModel.getShallow('baseline', true) || labelLayout.textVerticalAlign,
-      textFill: typeof textColor === 'function' ? textColor( // (1) In category axis with data zoom, tick is not the original
-      // index of axis.data. So tick should not be exposed to user
-      // in category axis.
-      // (2) Compatible with previous version, which always use formatted label as
-      // input. But in interval scale the formatted label is like '223,445', which
-      // maked user repalce ','. So we modify it to return original val but remain
-      // it as 'string' to avoid error in replacing.
-      axis.type === 'category' ? rawLabel : axis.type === 'value' ? tickValue + '' : tickValue, index) : textColor
-    }); // Pack data for mouse event
-
-    if (triggerEvent) {
-      textEl.eventData = makeAxisEventDataBase(axisModel);
-      textEl.eventData.targetType = 'axisLabel';
-      textEl.eventData.value = rawLabel;
-    } // FIXME
-
-
-    axisBuilder._dumbGroup.add(textEl);
-
-    textEl.updateTransform();
-    labelEls.push(textEl);
-    axisBuilder.group.add(textEl);
-    textEl.decomposeTransform();
-  });
-  return labelEls;
-}
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-var each$6 = each$1;
-var curry$1 = curry; // Build axisPointerModel, mergin tooltip.axisPointer model for each axis.
-// allAxesInfo should be updated when setOption performed.
-
-function collect(ecModel, api) {
-  var result = {
-    /**
-     * key: makeKey(axis.model)
-     * value: {
-     *      axis,
-     *      coordSys,
-     *      axisPointerModel,
-     *      triggerTooltip,
-     *      involveSeries,
-     *      snap,
-     *      seriesModels,
-     *      seriesDataCount
-     * }
-     */
-    axesInfo: {},
-    seriesInvolved: false,
-
-    /**
-     * key: makeKey(coordSys.model)
-     * value: Object: key makeKey(axis.model), value: axisInfo
-     */
-    coordSysAxesInfo: {},
-    coordSysMap: {}
-  };
-  collectAxesInfo(result, ecModel, api); // Check seriesInvolved for performance, in case too many series in some chart.
-
-  result.seriesInvolved && collectSeriesInfo(result, ecModel);
-  return result;
-}
-
-function collectAxesInfo(result, ecModel, api) {
-  var globalTooltipModel = ecModel.getComponent('tooltip');
-  var globalAxisPointerModel = ecModel.getComponent('axisPointer'); // links can only be set on global.
-
-  var linksOption = globalAxisPointerModel.get('link', true) || [];
-  var linkGroups = []; // Collect axes info.
-
-  each$6(api.getCoordinateSystems(), function (coordSys) {
-    // Some coordinate system do not support axes, like geo.
-    if (!coordSys.axisPointerEnabled) {
-      return;
-    }
-
-    var coordSysKey = makeKey(coordSys.model);
-    var axesInfoInCoordSys = result.coordSysAxesInfo[coordSysKey] = {};
-    result.coordSysMap[coordSysKey] = coordSys; // Set tooltip (like 'cross') is a convienent way to show axisPointer
-    // for user. So we enable seting tooltip on coordSys model.
-
-    var coordSysModel = coordSys.model;
-    var baseTooltipModel = coordSysModel.getModel('tooltip', globalTooltipModel);
-    each$6(coordSys.getAxes(), curry$1(saveTooltipAxisInfo, false, null)); // If axis tooltip used, choose tooltip axis for each coordSys.
-    // Notice this case: coordSys is `grid` but not `cartesian2D` here.
-
-    if (coordSys.getTooltipAxes && globalTooltipModel // If tooltip.showContent is set as false, tooltip will not
-    // show but axisPointer will show as normal.
-    && baseTooltipModel.get('show')) {
-      // Compatible with previous logic. But series.tooltip.trigger: 'axis'
-      // or series.data[n].tooltip.trigger: 'axis' are not support any more.
-      var triggerAxis = baseTooltipModel.get('trigger') === 'axis';
-      var cross = baseTooltipModel.get('axisPointer.type') === 'cross';
-      var tooltipAxes = coordSys.getTooltipAxes(baseTooltipModel.get('axisPointer.axis'));
-
-      if (triggerAxis || cross) {
-        each$6(tooltipAxes.baseAxes, curry$1(saveTooltipAxisInfo, cross ? 'cross' : true, triggerAxis));
-      }
-
-      if (cross) {
-        each$6(tooltipAxes.otherAxes, curry$1(saveTooltipAxisInfo, 'cross', false));
-      }
-    } // fromTooltip: true | false | 'cross'
-    // triggerTooltip: true | false | null
-
-
-    function saveTooltipAxisInfo(fromTooltip, triggerTooltip, axis) {
-      var axisPointerModel = axis.model.getModel('axisPointer', globalAxisPointerModel);
-      var axisPointerShow = axisPointerModel.get('show');
-
-      if (!axisPointerShow || axisPointerShow === 'auto' && !fromTooltip && !isHandleTrigger(axisPointerModel)) {
-        return;
-      }
-
-      if (triggerTooltip == null) {
-        triggerTooltip = axisPointerModel.get('triggerTooltip');
-      }
-
-      axisPointerModel = fromTooltip ? makeAxisPointerModel(axis, baseTooltipModel, globalAxisPointerModel, ecModel, fromTooltip, triggerTooltip) : axisPointerModel;
-      var snap = axisPointerModel.get('snap');
-      var key = makeKey(axis.model);
-      var involveSeries = triggerTooltip || snap || axis.type === 'category'; // If result.axesInfo[key] exist, override it (tooltip has higher priority).
-
-      var axisInfo = result.axesInfo[key] = {
-        key: key,
-        axis: axis,
-        coordSys: coordSys,
-        axisPointerModel: axisPointerModel,
-        triggerTooltip: triggerTooltip,
-        involveSeries: involveSeries,
-        snap: snap,
-        useHandle: isHandleTrigger(axisPointerModel),
-        seriesModels: []
-      };
-      axesInfoInCoordSys[key] = axisInfo;
-      result.seriesInvolved |= involveSeries;
-      var groupIndex = getLinkGroupIndex(linksOption, axis);
-
-      if (groupIndex != null) {
-        var linkGroup = linkGroups[groupIndex] || (linkGroups[groupIndex] = {
-          axesInfo: {}
-        });
-        linkGroup.axesInfo[key] = axisInfo;
-        linkGroup.mapper = linksOption[groupIndex].mapper;
-        axisInfo.linkGroup = linkGroup;
-      }
-    }
-  });
-}
-
-function makeAxisPointerModel(axis, baseTooltipModel, globalAxisPointerModel, ecModel, fromTooltip, triggerTooltip) {
-  var tooltipAxisPointerModel = baseTooltipModel.getModel('axisPointer');
-  var volatileOption = {};
-  each$6(['type', 'snap', 'lineStyle', 'shadowStyle', 'label', 'animation', 'animationDurationUpdate', 'animationEasingUpdate', 'z'], function (field) {
-    volatileOption[field] = clone(tooltipAxisPointerModel.get(field));
-  }); // category axis do not auto snap, otherwise some tick that do not
-  // has value can not be hovered. value/time/log axis default snap if
-  // triggered from tooltip and trigger tooltip.
-
-  volatileOption.snap = axis.type !== 'category' && !!triggerTooltip; // Compatibel with previous behavior, tooltip axis do not show label by default.
-  // Only these properties can be overrided from tooltip to axisPointer.
-
-  if (tooltipAxisPointerModel.get('type') === 'cross') {
-    volatileOption.type = 'line';
-  }
-
-  var labelOption = volatileOption.label || (volatileOption.label = {}); // Follow the convention, do not show label when triggered by tooltip by default.
-
-  labelOption.show == null && (labelOption.show = false);
-
-  if (fromTooltip === 'cross') {
-    // When 'cross', both axes show labels.
-    var tooltipAxisPointerLabelShow = tooltipAxisPointerModel.get('label.show');
-    labelOption.show = tooltipAxisPointerLabelShow != null ? tooltipAxisPointerLabelShow : true; // If triggerTooltip, this is a base axis, which should better not use cross style
-    // (cross style is dashed by default)
-
-    if (!triggerTooltip) {
-      var crossStyle = volatileOption.lineStyle = tooltipAxisPointerModel.get('crossStyle');
-      crossStyle && defaults(labelOption, crossStyle.textStyle);
-    }
-  }
-
-  return axis.model.getModel('axisPointer', new Model(volatileOption, globalAxisPointerModel, ecModel));
-}
-
-function collectSeriesInfo(result, ecModel) {
-  // Prepare data for axis trigger
-  ecModel.eachSeries(function (seriesModel) {
-    // Notice this case: this coordSys is `cartesian2D` but not `grid`.
-    var coordSys = seriesModel.coordinateSystem;
-    var seriesTooltipTrigger = seriesModel.get('tooltip.trigger', true);
-    var seriesTooltipShow = seriesModel.get('tooltip.show', true);
-
-    if (!coordSys || seriesTooltipTrigger === 'none' || seriesTooltipTrigger === false || seriesTooltipTrigger === 'item' || seriesTooltipShow === false || seriesModel.get('axisPointer.show', true) === false) {
-      return;
-    }
-
-    each$6(result.coordSysAxesInfo[makeKey(coordSys.model)], function (axisInfo) {
-      var axis = axisInfo.axis;
-
-      if (coordSys.getAxis(axis.dim) === axis) {
-        axisInfo.seriesModels.push(seriesModel);
-        axisInfo.seriesDataCount == null && (axisInfo.seriesDataCount = 0);
-        axisInfo.seriesDataCount += seriesModel.getData().count();
-      }
-    });
-  }, this);
-}
-/**
- * For example:
- * {
- *     axisPointer: {
- *         links: [{
- *             xAxisIndex: [2, 4],
- *             yAxisIndex: 'all'
- *         }, {
- *             xAxisId: ['a5', 'a7'],
- *             xAxisName: 'xxx'
- *         }]
- *     }
- * }
- */
-
-
-function getLinkGroupIndex(linksOption, axis) {
-  var axisModel = axis.model;
-  var dim = axis.dim;
-
-  for (var i = 0; i < linksOption.length; i++) {
-    var linkOption = linksOption[i] || {};
-
-    if (checkPropInLink(linkOption[dim + 'AxisId'], axisModel.id) || checkPropInLink(linkOption[dim + 'AxisIndex'], axisModel.componentIndex) || checkPropInLink(linkOption[dim + 'AxisName'], axisModel.name)) {
-      return i;
-    }
-  }
-}
-
-function checkPropInLink(linkPropValue, axisPropValue) {
-  return linkPropValue === 'all' || isArray(linkPropValue) && indexOf(linkPropValue, axisPropValue) >= 0 || linkPropValue === axisPropValue;
-}
-
-function fixValue(axisModel) {
-  var axisInfo = getAxisInfo(axisModel);
-
-  if (!axisInfo) {
-    return;
-  }
-
-  var axisPointerModel = axisInfo.axisPointerModel;
-  var scale = axisInfo.axis.scale;
-  var option = axisPointerModel.option;
-  var status = axisPointerModel.get('status');
-  var value = axisPointerModel.get('value'); // Parse init value for category and time axis.
-
-  if (value != null) {
-    value = scale.parse(value);
-  }
-
-  var useHandle = isHandleTrigger(axisPointerModel); // If `handle` used, `axisPointer` will always be displayed, so value
-  // and status should be initialized.
-
-  if (status == null) {
-    option.status = useHandle ? 'show' : 'hide';
-  }
-
-  var extent = scale.getExtent().slice();
-  extent[0] > extent[1] && extent.reverse();
-
-  if ( // Pick a value on axis when initializing.
-  value == null // If both `handle` and `dataZoom` are used, value may be out of axis extent,
-  // where we should re-pick a value to keep `handle` displaying normally.
-  || value > extent[1]) {
-    // Make handle displayed on the end of the axis when init, which looks better.
-    value = extent[1];
-  }
-
-  if (value < extent[0]) {
-    value = extent[0];
-  }
-
-  option.value = value;
-
-  if (useHandle) {
-    option.status = axisInfo.axis.scale.isBlank() ? 'hide' : 'show';
-  }
-}
-function getAxisInfo(axisModel) {
-  var coordSysAxesInfo = (axisModel.ecModel.getComponent('axisPointer') || {}).coordSysAxesInfo;
-  return coordSysAxesInfo && coordSysAxesInfo.axesInfo[makeKey(axisModel)];
-}
-function getAxisPointerModel(axisModel) {
-  var axisInfo = getAxisInfo(axisModel);
-  return axisInfo && axisInfo.axisPointerModel;
-}
-
-function isHandleTrigger(axisPointerModel) {
-  return !!axisPointerModel.get('handle.show');
-}
-/**
- * @param {module:echarts/model/Model} model
- * @return {string} unique key
- */
-
-
-function makeKey(model) {
-  return model.type + '||' + model.id;
-}
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-/**
- * Base class of AxisView.
- */
-
-var AxisView = extendComponentView({
-  type: 'axis',
-
-  /**
-   * @private
-   */
-  _axisPointer: null,
-
-  /**
-   * @protected
-   * @type {string}
-   */
-  axisPointerClass: null,
-
-  /**
-   * @override
-   */
-  render: function (axisModel, ecModel, api, payload) {
-    // FIXME
-    // This process should proformed after coordinate systems updated
-    // (axis scale updated), and should be performed each time update.
-    // So put it here temporarily, although it is not appropriate to
-    // put a model-writing procedure in `view`.
-    this.axisPointerClass && fixValue(axisModel);
-    AxisView.superApply(this, 'render', arguments);
-    updateAxisPointer(this, axisModel, ecModel, api, payload, true);
-  },
-
-  /**
-   * Action handler.
-   * @public
-   * @param {module:echarts/coord/cartesian/AxisModel} axisModel
-   * @param {module:echarts/model/Global} ecModel
-   * @param {module:echarts/ExtensionAPI} api
-   * @param {Object} payload
-   */
-  updateAxisPointer: function (axisModel, ecModel, api, payload, force) {
-    updateAxisPointer(this, axisModel, ecModel, api, payload, false);
-  },
-
-  /**
-   * @override
-   */
-  remove: function (ecModel, api) {
-    var axisPointer = this._axisPointer;
-    axisPointer && axisPointer.remove(api);
-    AxisView.superApply(this, 'remove', arguments);
-  },
-
-  /**
-   * @override
-   */
-  dispose: function (ecModel, api) {
-    disposeAxisPointer(this, api);
-    AxisView.superApply(this, 'dispose', arguments);
-  }
-});
-
-function updateAxisPointer(axisView, axisModel, ecModel, api, payload, forceRender) {
-  var Clazz = AxisView.getAxisPointerClass(axisView.axisPointerClass);
-
-  if (!Clazz) {
-    return;
-  }
-
-  var axisPointerModel = getAxisPointerModel(axisModel);
-  axisPointerModel ? (axisView._axisPointer || (axisView._axisPointer = new Clazz())).render(axisModel, axisPointerModel, api, forceRender) : disposeAxisPointer(axisView, api);
-}
-
-function disposeAxisPointer(axisView, ecModel, api) {
-  var axisPointer = axisView._axisPointer;
-  axisPointer && axisPointer.dispose(ecModel, api);
-  axisView._axisPointer = null;
-}
-
-var axisPointerClazz = [];
-
-AxisView.registerAxisPointerClass = function (type, clazz) {
-  axisPointerClazz[type] = clazz;
-};
-
-AxisView.getAxisPointerClass = function (type) {
-  return type && axisPointerClazz[type];
-};
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-/**
- * Can only be called after coordinate system creation stage.
- * (Can be called before coordinate system update stage).
- *
- * @param {Object} opt {labelInside}
- * @return {Object} {
- *  position, rotation, labelDirection, labelOffset,
- *  tickDirection, labelRotate, z2
- * }
- */
-
-function layout$1(gridModel, axisModel, opt) {
-  opt = opt || {};
-  var grid = gridModel.coordinateSystem;
-  var axis = axisModel.axis;
-  var layout = {};
-  var otherAxisOnZeroOf = axis.getAxesOnZeroOf()[0];
-  var rawAxisPosition = axis.position;
-  var axisPosition = otherAxisOnZeroOf ? 'onZero' : rawAxisPosition;
-  var axisDim = axis.dim;
-  var rect = grid.getRect();
-  var rectBound = [rect.x, rect.x + rect.width, rect.y, rect.y + rect.height];
-  var idx = {
-    left: 0,
-    right: 1,
-    top: 0,
-    bottom: 1,
-    onZero: 2
-  };
-  var axisOffset = axisModel.get('offset') || 0;
-  var posBound = axisDim === 'x' ? [rectBound[2] - axisOffset, rectBound[3] + axisOffset] : [rectBound[0] - axisOffset, rectBound[1] + axisOffset];
-
-  if (otherAxisOnZeroOf) {
-    var onZeroCoord = otherAxisOnZeroOf.toGlobalCoord(otherAxisOnZeroOf.dataToCoord(0));
-    posBound[idx.onZero] = Math.max(Math.min(onZeroCoord, posBound[1]), posBound[0]);
-  } // Axis position
-
-
-  layout.position = [axisDim === 'y' ? posBound[idx[axisPosition]] : rectBound[0], axisDim === 'x' ? posBound[idx[axisPosition]] : rectBound[3]]; // Axis rotation
-
-  layout.rotation = Math.PI / 2 * (axisDim === 'x' ? 0 : 1); // Tick and label direction, x y is axisDim
-
-  var dirMap = {
-    top: -1,
-    bottom: 1,
-    left: -1,
-    right: 1
-  };
-  layout.labelDirection = layout.tickDirection = layout.nameDirection = dirMap[rawAxisPosition];
-  layout.labelOffset = otherAxisOnZeroOf ? posBound[idx[rawAxisPosition]] - posBound[idx.onZero] : 0;
-
-  if (axisModel.get('axisTick.inside')) {
-    layout.tickDirection = -layout.tickDirection;
-  }
-
-  if (retrieve(opt.labelInside, axisModel.get('axisLabel.inside'))) {
-    layout.labelDirection = -layout.labelDirection;
-  } // Special label rotation
-
-
-  var labelRotate = axisModel.get('axisLabel.rotate');
-  layout.labelRotate = axisPosition === 'top' ? -labelRotate : labelRotate; // Over splitLine and splitArea
-
-  layout.z2 = 1;
-  return layout;
-}
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-var axisBuilderAttrs = ['axisLine', 'axisTickLabel', 'axisName'];
-var selfBuilderAttrs = ['splitArea', 'splitLine']; // function getAlignWithLabel(model, axisModel) {
-//     var alignWithLabel = model.get('alignWithLabel');
-//     if (alignWithLabel === 'auto') {
-//         alignWithLabel = axisModel.get('axisTick.alignWithLabel');
-//     }
-//     return alignWithLabel;
-// }
-
-var CartesianAxisView = AxisView.extend({
-  type: 'cartesianAxis',
-  axisPointerClass: 'CartesianAxisPointer',
-
-  /**
-   * @override
-   */
-  render: function (axisModel, ecModel, api, payload) {
-    this.group.removeAll();
-    var oldAxisGroup = this._axisGroup;
-    this._axisGroup = new Group();
-    this.group.add(this._axisGroup);
-
-    if (!axisModel.get('show')) {
-      return;
-    }
-
-    var gridModel = axisModel.getCoordSysModel();
-    var layout = layout$1(gridModel, axisModel);
-    var axisBuilder = new AxisBuilder(axisModel, layout);
-    each$1(axisBuilderAttrs, axisBuilder.add, axisBuilder);
-
-    this._axisGroup.add(axisBuilder.getGroup());
-
-    each$1(selfBuilderAttrs, function (name) {
-      if (axisModel.get(name + '.show')) {
-        this['_' + name](axisModel, gridModel);
-      }
-    }, this);
-    groupTransition(oldAxisGroup, this._axisGroup, axisModel);
-    CartesianAxisView.superCall(this, 'render', axisModel, ecModel, api, payload);
-  },
-  remove: function () {
-    this._splitAreaColors = null;
-  },
-
-  /**
-   * @param {module:echarts/coord/cartesian/AxisModel} axisModel
-   * @param {module:echarts/coord/cartesian/GridModel} gridModel
-   * @private
-   */
-  _splitLine: function (axisModel, gridModel) {
-    var axis = axisModel.axis;
-
-    if (axis.scale.isBlank()) {
-      return;
-    }
-
-    var splitLineModel = axisModel.getModel('splitLine');
-    var lineStyleModel = splitLineModel.getModel('lineStyle');
-    var lineColors = lineStyleModel.get('color');
-    lineColors = isArray(lineColors) ? lineColors : [lineColors];
-    var gridRect = gridModel.coordinateSystem.getRect();
-    var isHorizontal = axis.isHorizontal();
-    var lineCount = 0;
-    var ticksCoords = axis.getTicksCoords({
-      tickModel: splitLineModel
-    });
-    var p1 = [];
-    var p2 = []; // Simple optimization
-    // Batching the lines if color are the same
-
-    var lineStyle = lineStyleModel.getLineStyle();
-
-    for (var i = 0; i < ticksCoords.length; i++) {
-      var tickCoord = axis.toGlobalCoord(ticksCoords[i].coord);
-
-      if (isHorizontal) {
-        p1[0] = tickCoord;
-        p1[1] = gridRect.y;
-        p2[0] = tickCoord;
-        p2[1] = gridRect.y + gridRect.height;
-      } else {
-        p1[0] = gridRect.x;
-        p1[1] = tickCoord;
-        p2[0] = gridRect.x + gridRect.width;
-        p2[1] = tickCoord;
-      }
-
-      var colorIndex = lineCount++ % lineColors.length;
-      var tickValue = ticksCoords[i].tickValue;
-
-      this._axisGroup.add(new Line(subPixelOptimizeLine({
-        anid: tickValue != null ? 'line_' + ticksCoords[i].tickValue : null,
-        shape: {
-          x1: p1[0],
-          y1: p1[1],
-          x2: p2[0],
-          y2: p2[1]
-        },
-        style: defaults({
-          stroke: lineColors[colorIndex]
-        }, lineStyle),
-        silent: true
-      })));
-    }
-  },
-
-  /**
-   * @param {module:echarts/coord/cartesian/AxisModel} axisModel
-   * @param {module:echarts/coord/cartesian/GridModel} gridModel
-   * @private
-   */
-  _splitArea: function (axisModel, gridModel) {
-    var axis = axisModel.axis;
-
-    if (axis.scale.isBlank()) {
-      return;
-    }
-
-    var splitAreaModel = axisModel.getModel('splitArea');
-    var areaStyleModel = splitAreaModel.getModel('areaStyle');
-    var areaColors = areaStyleModel.get('color');
-    var gridRect = gridModel.coordinateSystem.getRect();
-    var ticksCoords = axis.getTicksCoords({
-      tickModel: splitAreaModel,
-      clamp: true
-    });
-
-    if (!ticksCoords.length) {
-      return;
-    } // For Making appropriate splitArea animation, the color and anid
-    // should be corresponding to previous one if possible.
-
-
-    var areaColorsLen = areaColors.length;
-    var lastSplitAreaColors = this._splitAreaColors;
-    var newSplitAreaColors = createHashMap();
-    var colorIndex = 0;
-
-    if (lastSplitAreaColors) {
-      for (var i = 0; i < ticksCoords.length; i++) {
-        var cIndex = lastSplitAreaColors.get(ticksCoords[i].tickValue);
-
-        if (cIndex != null) {
-          colorIndex = (cIndex + (areaColorsLen - 1) * i) % areaColorsLen;
-          break;
-        }
-      }
-    }
-
-    var prev = axis.toGlobalCoord(ticksCoords[0].coord);
-    var areaStyle = areaStyleModel.getAreaStyle();
-    areaColors = isArray(areaColors) ? areaColors : [areaColors];
-
-    for (var i = 1; i < ticksCoords.length; i++) {
-      var tickCoord = axis.toGlobalCoord(ticksCoords[i].coord);
-      var x;
-      var y;
-      var width;
-      var height;
-
-      if (axis.isHorizontal()) {
-        x = prev;
-        y = gridRect.y;
-        width = tickCoord - x;
-        height = gridRect.height;
-        prev = x + width;
-      } else {
-        x = gridRect.x;
-        y = prev;
-        width = gridRect.width;
-        height = tickCoord - y;
-        prev = y + height;
-      }
-
-      var tickValue = ticksCoords[i - 1].tickValue;
-      tickValue != null && newSplitAreaColors.set(tickValue, colorIndex);
-
-      this._axisGroup.add(new Rect({
-        anid: tickValue != null ? 'area_' + tickValue : null,
-        shape: {
-          x: x,
-          y: y,
-          width: width,
-          height: height
-        },
-        style: defaults({
-          fill: areaColors[colorIndex]
-        }, areaStyle),
-        silent: true
-      }));
-
-      colorIndex = (colorIndex + 1) % areaColorsLen;
-    }
-
-    this._splitAreaColors = newSplitAreaColors;
-  }
-});
-CartesianAxisView.extend({
-  type: 'xAxis'
-});
-CartesianAxisView.extend({
-  type: 'yAxis'
-});
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-extendComponentView({
-  type: 'grid',
-  render: function (gridModel, ecModel) {
-    this.group.removeAll();
-
-    if (gridModel.get('show')) {
-      this.group.add(new Rect({
-        shape: gridModel.coordinateSystem.getRect(),
-        style: defaults({
-          fill: gridModel.get('backgroundColor')
-        }, gridModel.getItemStyle()),
-        silent: true,
-        z2: -1
-      }));
-    }
-  }
-});
-registerPreprocessor(function (option) {
-  // Only create grid when need
-  if (option.xAxis && option.yAxis && !option.grid) {
-    option.grid = {};
-  }
-});
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
-registerLayout(curry(layout, 'bar')); // Should after normal bar layout, otherwise it is blocked by normal bar layout.
-
-registerLayout(largeLayout);
-registerVisual({
-  seriesType: 'bar',
-  reset: function (seriesModel) {
-    // Visual coding for legend
-    seriesModel.getData().setVisual('legendSymbol', 'roundRect');
-  }
-});
-
-/*
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*   http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
 SeriesModel.extend({
   type: 'series.line',
   dependencies: ['grid', 'polar'],
@@ -36701,6 +33372,48 @@ SeriesModel.extend({
     hoverLayerThreshold: Infinity
   }
 });
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+/**
+ * @param {module:echarts/data/List} data
+ * @param {number} dataIndex
+ * @return {string} label string. Not null/undefined
+ */
+
+function getDefaultLabel(data, dataIndex) {
+  var labelDims = data.mapDimension('defaultedLabel', true);
+  var len = labelDims.length; // Simple optimization (in lots of cases, label dims length is 1)
+
+  if (len === 1) {
+    return retrieveRawValue(data, dataIndex, labelDims[0]);
+  } else if (len) {
+    var vals = [];
+
+    for (var i = 0; i < labelDims.length; i++) {
+      var val = retrieveRawValue(data, dataIndex, labelDims[i]);
+      vals.push(val);
+    }
+
+    return vals.join(' ');
+  }
+}
 
 /*
 * Licensed to the Apache Software Foundation (ASF) under one
@@ -38886,6 +35599,2661 @@ var dataSample = function (seriesType) {
 * specific language governing permissions and limitations
 * under the License.
 */
+
+/**
+ * Cartesian coordinate system
+ * @module  echarts/coord/Cartesian
+ *
+ */
+function dimAxisMapper(dim) {
+  return this._axes[dim];
+}
+/**
+ * @alias module:echarts/coord/Cartesian
+ * @constructor
+ */
+
+
+var Cartesian = function (name) {
+  this._axes = {};
+  this._dimList = [];
+  /**
+   * @type {string}
+   */
+
+  this.name = name || '';
+};
+
+Cartesian.prototype = {
+  constructor: Cartesian,
+  type: 'cartesian',
+
+  /**
+   * Get axis
+   * @param  {number|string} dim
+   * @return {module:echarts/coord/Cartesian~Axis}
+   */
+  getAxis: function (dim) {
+    return this._axes[dim];
+  },
+
+  /**
+   * Get axes list
+   * @return {Array.<module:echarts/coord/Cartesian~Axis>}
+   */
+  getAxes: function () {
+    return map(this._dimList, dimAxisMapper, this);
+  },
+
+  /**
+   * Get axes list by given scale type
+   */
+  getAxesByScale: function (scaleType) {
+    scaleType = scaleType.toLowerCase();
+    return filter(this.getAxes(), function (axis) {
+      return axis.scale.type === scaleType;
+    });
+  },
+
+  /**
+   * Add axis
+   * @param {module:echarts/coord/Cartesian.Axis}
+   */
+  addAxis: function (axis) {
+    var dim = axis.dim;
+    this._axes[dim] = axis;
+
+    this._dimList.push(dim);
+  },
+
+  /**
+   * Convert data to coord in nd space
+   * @param {Array.<number>|Object.<string, number>} val
+   * @return {Array.<number>|Object.<string, number>}
+   */
+  dataToCoord: function (val) {
+    return this._dataCoordConvert(val, 'dataToCoord');
+  },
+
+  /**
+   * Convert coord in nd space to data
+   * @param  {Array.<number>|Object.<string, number>} val
+   * @return {Array.<number>|Object.<string, number>}
+   */
+  coordToData: function (val) {
+    return this._dataCoordConvert(val, 'coordToData');
+  },
+  _dataCoordConvert: function (input, method) {
+    var dimList = this._dimList;
+    var output = input instanceof Array ? [] : {};
+
+    for (var i = 0; i < dimList.length; i++) {
+      var dim = dimList[i];
+      var axis = this._axes[dim];
+      output[dim] = axis[method](input[dim]);
+    }
+
+    return output;
+  }
+};
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+function Cartesian2D(name) {
+  Cartesian.call(this, name);
+}
+
+Cartesian2D.prototype = {
+  constructor: Cartesian2D,
+  type: 'cartesian2d',
+
+  /**
+   * @type {Array.<string>}
+   * @readOnly
+   */
+  dimensions: ['x', 'y'],
+
+  /**
+   * Base axis will be used on stacking.
+   *
+   * @return {module:echarts/coord/cartesian/Axis2D}
+   */
+  getBaseAxis: function () {
+    return this.getAxesByScale('ordinal')[0] || this.getAxesByScale('time')[0] || this.getAxis('x');
+  },
+
+  /**
+   * If contain point
+   * @param {Array.<number>} point
+   * @return {boolean}
+   */
+  containPoint: function (point) {
+    var axisX = this.getAxis('x');
+    var axisY = this.getAxis('y');
+    return axisX.contain(axisX.toLocalCoord(point[0])) && axisY.contain(axisY.toLocalCoord(point[1]));
+  },
+
+  /**
+   * If contain data
+   * @param {Array.<number>} data
+   * @return {boolean}
+   */
+  containData: function (data) {
+    return this.getAxis('x').containData(data[0]) && this.getAxis('y').containData(data[1]);
+  },
+
+  /**
+   * @param {Array.<number>} data
+   * @param {Array.<number>} out
+   * @return {Array.<number>}
+   */
+  dataToPoint: function (data, reserved, out) {
+    var xAxis = this.getAxis('x');
+    var yAxis = this.getAxis('y');
+    out = out || [];
+    out[0] = xAxis.toGlobalCoord(xAxis.dataToCoord(data[0]));
+    out[1] = yAxis.toGlobalCoord(yAxis.dataToCoord(data[1]));
+    return out;
+  },
+
+  /**
+   * @param {Array.<number>} data
+   * @param {Array.<number>} out
+   * @return {Array.<number>}
+   */
+  clampData: function (data, out) {
+    var xScale = this.getAxis('x').scale;
+    var yScale = this.getAxis('y').scale;
+    var xAxisExtent = xScale.getExtent();
+    var yAxisExtent = yScale.getExtent();
+    var x = xScale.parse(data[0]);
+    var y = yScale.parse(data[1]);
+    out = out || [];
+    out[0] = Math.min(Math.max(Math.min(xAxisExtent[0], xAxisExtent[1]), x), Math.max(xAxisExtent[0], xAxisExtent[1]));
+    out[1] = Math.min(Math.max(Math.min(yAxisExtent[0], yAxisExtent[1]), y), Math.max(yAxisExtent[0], yAxisExtent[1]));
+    return out;
+  },
+
+  /**
+   * @param {Array.<number>} point
+   * @param {Array.<number>} out
+   * @return {Array.<number>}
+   */
+  pointToData: function (point, out) {
+    var xAxis = this.getAxis('x');
+    var yAxis = this.getAxis('y');
+    out = out || [];
+    out[0] = xAxis.coordToData(xAxis.toLocalCoord(point[0]));
+    out[1] = yAxis.coordToData(yAxis.toLocalCoord(point[1]));
+    return out;
+  },
+
+  /**
+   * Get other axis
+   * @param {module:echarts/coord/cartesian/Axis2D} axis
+   */
+  getOtherAxis: function (axis) {
+    return this.getAxis(axis.dim === 'x' ? 'y' : 'x');
+  }
+};
+inherits(Cartesian2D, Cartesian);
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+/**
+ * Extend axis 2d
+ * @constructor module:echarts/coord/cartesian/Axis2D
+ * @extends {module:echarts/coord/cartesian/Axis}
+ * @param {string} dim
+ * @param {*} scale
+ * @param {Array.<number>} coordExtent
+ * @param {string} axisType
+ * @param {string} position
+ */
+
+var Axis2D = function (dim, scale, coordExtent, axisType, position) {
+  Axis.call(this, dim, scale, coordExtent);
+  /**
+   * Axis type
+   *  - 'category'
+   *  - 'value'
+   *  - 'time'
+   *  - 'log'
+   * @type {string}
+   */
+
+  this.type = axisType || 'value';
+  /**
+   * Axis position
+   *  - 'top'
+   *  - 'bottom'
+   *  - 'left'
+   *  - 'right'
+   */
+
+  this.position = position || 'bottom';
+};
+
+Axis2D.prototype = {
+  constructor: Axis2D,
+
+  /**
+   * Index of axis, can be used as key
+   */
+  index: 0,
+
+  /**
+   * Implemented in <module:echarts/coord/cartesian/Grid>.
+   * @return {Array.<module:echarts/coord/cartesian/Axis2D>}
+   *         If not on zero of other axis, return null/undefined.
+   *         If no axes, return an empty array.
+   */
+  getAxesOnZeroOf: null,
+
+  /**
+   * Axis model
+   * @param {module:echarts/coord/cartesian/AxisModel}
+   */
+  model: null,
+  isHorizontal: function () {
+    var position = this.position;
+    return position === 'top' || position === 'bottom';
+  },
+
+  /**
+   * Each item cooresponds to this.getExtent(), which
+   * means globalExtent[0] may greater than globalExtent[1],
+   * unless `asc` is input.
+   *
+   * @param {boolean} [asc]
+   * @return {Array.<number>}
+   */
+  getGlobalExtent: function (asc) {
+    var ret = this.getExtent();
+    ret[0] = this.toGlobalCoord(ret[0]);
+    ret[1] = this.toGlobalCoord(ret[1]);
+    asc && ret[0] > ret[1] && ret.reverse();
+    return ret;
+  },
+  getOtherAxis: function () {
+    this.grid.getOtherAxis();
+  },
+
+  /**
+   * @override
+   */
+  pointToData: function (point, clamp) {
+    return this.coordToData(this.toLocalCoord(point[this.dim === 'x' ? 0 : 1]), clamp);
+  },
+
+  /**
+   * Transform global coord to local coord,
+   * i.e. var localCoord = axis.toLocalCoord(80);
+   * designate by module:echarts/coord/cartesian/Grid.
+   * @type {Function}
+   */
+  toLocalCoord: null,
+
+  /**
+   * Transform global coord to local coord,
+   * i.e. var globalCoord = axis.toLocalCoord(40);
+   * designate by module:echarts/coord/cartesian/Grid.
+   * @type {Function}
+   */
+  toGlobalCoord: null
+};
+inherits(Axis2D, Axis);
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+var defaultOption = {
+  show: true,
+  zlevel: 0,
+  z: 0,
+  // Inverse the axis.
+  inverse: false,
+  // Axis name displayed.
+  name: '',
+  // 'start' | 'middle' | 'end'
+  nameLocation: 'end',
+  // By degree. By defualt auto rotate by nameLocation.
+  nameRotate: null,
+  nameTruncate: {
+    maxWidth: null,
+    ellipsis: '...',
+    placeholder: '.'
+  },
+  // Use global text style by default.
+  nameTextStyle: {},
+  // The gap between axisName and axisLine.
+  nameGap: 15,
+  // Default `false` to support tooltip.
+  silent: false,
+  // Default `false` to avoid legacy user event listener fail.
+  triggerEvent: false,
+  tooltip: {
+    show: false
+  },
+  axisPointer: {},
+  axisLine: {
+    show: true,
+    onZero: true,
+    onZeroAxisIndex: null,
+    lineStyle: {
+      color: '#333',
+      width: 1,
+      type: 'solid'
+    },
+    // The arrow at both ends the the axis.
+    symbol: ['none', 'none'],
+    symbolSize: [10, 15]
+  },
+  axisTick: {
+    show: true,
+    // Whether axisTick is inside the grid or outside the grid.
+    inside: false,
+    // The length of axisTick.
+    length: 5,
+    lineStyle: {
+      width: 1
+    }
+  },
+  axisLabel: {
+    show: true,
+    // Whether axisLabel is inside the grid or outside the grid.
+    inside: false,
+    rotate: 0,
+    // true | false | null/undefined (auto)
+    showMinLabel: null,
+    // true | false | null/undefined (auto)
+    showMaxLabel: null,
+    margin: 8,
+    // formatter: null,
+    fontSize: 12
+  },
+  splitLine: {
+    show: true,
+    lineStyle: {
+      color: ['#ccc'],
+      width: 1,
+      type: 'solid'
+    }
+  },
+  splitArea: {
+    show: false,
+    areaStyle: {
+      color: ['rgba(250,250,250,0.3)', 'rgba(200,200,200,0.3)']
+    }
+  }
+};
+var axisDefault = {};
+axisDefault.categoryAxis = merge({
+  // The gap at both ends of the axis. For categoryAxis, boolean.
+  boundaryGap: true,
+  // Set false to faster category collection.
+  // Only usefull in the case like: category is
+  // ['2012-01-01', '2012-01-02', ...], where the input
+  // data has been ensured not duplicate and is large data.
+  // null means "auto":
+  // if axis.data provided, do not deduplication,
+  // else do deduplication.
+  deduplication: null,
+  // splitArea: {
+  // show: false
+  // },
+  splitLine: {
+    show: false
+  },
+  axisTick: {
+    // If tick is align with label when boundaryGap is true
+    alignWithLabel: false,
+    interval: 'auto'
+  },
+  axisLabel: {
+    interval: 'auto'
+  }
+}, defaultOption);
+axisDefault.valueAxis = merge({
+  // The gap at both ends of the axis. For value axis, [GAP, GAP], where
+  // `GAP` can be an absolute pixel number (like `35`), or percent (like `'30%'`)
+  boundaryGap: [0, 0],
+  // TODO
+  // min/max: [30, datamin, 60] or [20, datamin] or [datamin, 60]
+  // Min value of the axis. can be:
+  // + a number
+  // + 'dataMin': use the min value in data.
+  // + null/undefined: auto decide min value (consider pretty look and boundaryGap).
+  // min: null,
+  // Max value of the axis. can be:
+  // + a number
+  // + 'dataMax': use the max value in data.
+  // + null/undefined: auto decide max value (consider pretty look and boundaryGap).
+  // max: null,
+  // Readonly prop, specifies start value of the range when using data zoom.
+  // rangeStart: null
+  // Readonly prop, specifies end value of the range when using data zoom.
+  // rangeEnd: null
+  // Optional value can be:
+  // + `false`: always include value 0.
+  // + `true`: the extent do not consider value 0.
+  // scale: false,
+  // AxisTick and axisLabel and splitLine are caculated based on splitNumber.
+  splitNumber: 5 // Interval specifies the span of the ticks is mandatorily.
+  // interval: null
+  // Specify min interval when auto calculate tick interval.
+  // minInterval: null
+  // Specify max interval when auto calculate tick interval.
+  // maxInterval: null
+
+}, defaultOption);
+axisDefault.timeAxis = defaults({
+  scale: true,
+  min: 'dataMin',
+  max: 'dataMax'
+}, axisDefault.valueAxis);
+axisDefault.logAxis = defaults({
+  scale: true,
+  logBase: 10
+}, axisDefault.valueAxis);
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+var AXIS_TYPES = ['value', 'category', 'time', 'log'];
+/**
+ * Generate sub axis model class
+ * @param {string} axisName 'x' 'y' 'radius' 'angle' 'parallel'
+ * @param {module:echarts/model/Component} BaseAxisModelClass
+ * @param {Function} axisTypeDefaulter
+ * @param {Object} [extraDefaultOption]
+ */
+
+var axisModelCreator = function (axisName, BaseAxisModelClass, axisTypeDefaulter, extraDefaultOption) {
+  each$1(AXIS_TYPES, function (axisType) {
+    BaseAxisModelClass.extend({
+      /**
+       * @readOnly
+       */
+      type: axisName + 'Axis.' + axisType,
+      mergeDefaultAndTheme: function (option, ecModel) {
+        var layoutMode = this.layoutMode;
+        var inputPositionParams = layoutMode ? getLayoutParams(option) : {};
+        var themeModel = ecModel.getTheme();
+        merge(option, themeModel.get(axisType + 'Axis'));
+        merge(option, this.getDefaultOption());
+        option.type = axisTypeDefaulter(axisName, option);
+
+        if (layoutMode) {
+          mergeLayoutParam(option, inputPositionParams, layoutMode);
+        }
+      },
+
+      /**
+       * @override
+       */
+      optionUpdated: function () {
+        var thisOption = this.option;
+
+        if (thisOption.type === 'category') {
+          this.__ordinalMeta = OrdinalMeta.createByAxisModel(this);
+        }
+      },
+
+      /**
+       * Should not be called before all of 'getInitailData' finished.
+       * Because categories are collected during initializing data.
+       */
+      getCategories: function (rawData) {
+        var option = this.option; // FIXME
+        // warning if called before all of 'getInitailData' finished.
+
+        if (option.type === 'category') {
+          if (rawData) {
+            return option.data;
+          }
+
+          return this.__ordinalMeta.categories;
+        }
+      },
+      getOrdinalMeta: function () {
+        return this.__ordinalMeta;
+      },
+      defaultOption: mergeAll([{}, axisDefault[axisType + 'Axis'], extraDefaultOption], true)
+    });
+  });
+  ComponentModel.registerSubTypeDefaulter(axisName + 'Axis', curry(axisTypeDefaulter, axisName));
+};
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+var AxisModel = ComponentModel.extend({
+  type: 'cartesian2dAxis',
+
+  /**
+   * @type {module:echarts/coord/cartesian/Axis2D}
+   */
+  axis: null,
+
+  /**
+   * @override
+   */
+  init: function () {
+    AxisModel.superApply(this, 'init', arguments);
+    this.resetRange();
+  },
+
+  /**
+   * @override
+   */
+  mergeOption: function () {
+    AxisModel.superApply(this, 'mergeOption', arguments);
+    this.resetRange();
+  },
+
+  /**
+   * @override
+   */
+  restoreData: function () {
+    AxisModel.superApply(this, 'restoreData', arguments);
+    this.resetRange();
+  },
+
+  /**
+   * @override
+   * @return {module:echarts/model/Component}
+   */
+  getCoordSysModel: function () {
+    return this.ecModel.queryComponents({
+      mainType: 'grid',
+      index: this.option.gridIndex,
+      id: this.option.gridId
+    })[0];
+  }
+});
+
+function getAxisType(axisDim, option) {
+  // Default axis with data is category axis
+  return option.type || (option.data ? 'category' : 'value');
+}
+
+merge(AxisModel.prototype, axisModelCommonMixin);
+var extraOption = {
+  // gridIndex: 0,
+  // gridId: '',
+  // Offset is for multiple axis on the same position
+  offset: 0
+};
+axisModelCreator('x', AxisModel, getAxisType, extraOption);
+axisModelCreator('y', AxisModel, getAxisType, extraOption);
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+// Grid 是在有直角坐标系的时候必须要存在的
+// 所以这里也要被 Cartesian2D 依赖
+ComponentModel.extend({
+  type: 'grid',
+  dependencies: ['xAxis', 'yAxis'],
+  layoutMode: 'box',
+
+  /**
+   * @type {module:echarts/coord/cartesian/Grid}
+   */
+  coordinateSystem: null,
+  defaultOption: {
+    show: false,
+    zlevel: 0,
+    z: 0,
+    left: '10%',
+    top: 60,
+    right: '10%',
+    bottom: 60,
+    // If grid size contain label
+    containLabel: false,
+    // width: {totalWidth} - left - right,
+    // height: {totalHeight} - top - bottom,
+    backgroundColor: 'rgba(0,0,0,0)',
+    borderWidth: 1,
+    borderColor: '#ccc'
+  }
+});
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
+/**
+ * Grid is a region which contains at most 4 cartesian systems
+ *
+ * TODO Default cartesian
+ */
+/**
+ * Check if the axis is used in the specified grid
+ * @inner
+ */
+
+function isAxisUsedInTheGrid(axisModel, gridModel, ecModel) {
+  return axisModel.getCoordSysModel() === gridModel;
+}
+
+function Grid(gridModel, ecModel, api) {
+  /**
+   * @type {Object.<string, module:echarts/coord/cartesian/Cartesian2D>}
+   * @private
+   */
+  this._coordsMap = {};
+  /**
+   * @type {Array.<module:echarts/coord/cartesian/Cartesian>}
+   * @private
+   */
+
+  this._coordsList = [];
+  /**
+   * @type {Object.<string, module:echarts/coord/cartesian/Axis2D>}
+   * @private
+   */
+
+  this._axesMap = {};
+  /**
+   * @type {Array.<module:echarts/coord/cartesian/Axis2D>}
+   * @private
+   */
+
+  this._axesList = [];
+
+  this._initCartesian(gridModel, ecModel, api);
+
+  this.model = gridModel;
+}
+
+var gridProto = Grid.prototype;
+gridProto.type = 'grid';
+gridProto.axisPointerEnabled = true;
+
+gridProto.getRect = function () {
+  return this._rect;
+};
+
+gridProto.update = function (ecModel, api) {
+  var axesMap = this._axesMap;
+
+  this._updateScale(ecModel, this.model);
+
+  each$1(axesMap.x, function (xAxis) {
+    niceScaleExtent(xAxis.scale, xAxis.model);
+  });
+  each$1(axesMap.y, function (yAxis) {
+    niceScaleExtent(yAxis.scale, yAxis.model);
+  }); // Key: axisDim_axisIndex, value: boolean, whether onZero target.
+
+  var onZeroRecords = {};
+  each$1(axesMap.x, function (xAxis) {
+    fixAxisOnZero(axesMap, 'y', xAxis, onZeroRecords);
+  });
+  each$1(axesMap.y, function (yAxis) {
+    fixAxisOnZero(axesMap, 'x', yAxis, onZeroRecords);
+  }); // Resize again if containLabel is enabled
+  // FIXME It may cause getting wrong grid size in data processing stage
+
+  this.resize(this.model, api);
+};
+
+function fixAxisOnZero(axesMap, otherAxisDim, axis, onZeroRecords) {
+  axis.getAxesOnZeroOf = function () {
+    // TODO: onZero of multiple axes.
+    return otherAxisOnZeroOf ? [otherAxisOnZeroOf] : [];
+  }; // onZero can not be enabled in these two situations:
+  // 1. When any other axis is a category axis.
+  // 2. When no axis is cross 0 point.
+
+
+  var otherAxes = axesMap[otherAxisDim];
+  var otherAxisOnZeroOf;
+  var axisModel = axis.model;
+  var onZero = axisModel.get('axisLine.onZero');
+  var onZeroAxisIndex = axisModel.get('axisLine.onZeroAxisIndex');
+
+  if (!onZero) {
+    return;
+  } // If target axis is specified.
+
+
+  if (onZeroAxisIndex != null) {
+    if (canOnZeroToAxis(otherAxes[onZeroAxisIndex])) {
+      otherAxisOnZeroOf = otherAxes[onZeroAxisIndex];
+    }
+  } else {
+    // Find the first available other axis.
+    for (var idx in otherAxes) {
+      if (otherAxes.hasOwnProperty(idx) && canOnZeroToAxis(otherAxes[idx]) // Consider that two Y axes on one value axis,
+      // if both onZero, the two Y axes overlap.
+      && !onZeroRecords[getOnZeroRecordKey(otherAxes[idx])]) {
+        otherAxisOnZeroOf = otherAxes[idx];
+        break;
+      }
+    }
+  }
+
+  if (otherAxisOnZeroOf) {
+    onZeroRecords[getOnZeroRecordKey(otherAxisOnZeroOf)] = true;
+  }
+
+  function getOnZeroRecordKey(axis) {
+    return axis.dim + '_' + axis.index;
+  }
+}
+
+function canOnZeroToAxis(axis) {
+  return axis && axis.type !== 'category' && axis.type !== 'time' && ifAxisCrossZero(axis);
+}
+/**
+ * Resize the grid
+ * @param {module:echarts/coord/cartesian/GridModel} gridModel
+ * @param {module:echarts/ExtensionAPI} api
+ */
+
+
+gridProto.resize = function (gridModel, api, ignoreContainLabel) {
+  var gridRect = getLayoutRect(gridModel.getBoxLayoutParams(), {
+    width: api.getWidth(),
+    height: api.getHeight()
+  });
+  this._rect = gridRect;
+  var axesList = this._axesList;
+  adjustAxes(); // Minus label size
+
+  if (!ignoreContainLabel && gridModel.get('containLabel')) {
+    each$1(axesList, function (axis) {
+      if (!axis.model.get('axisLabel.inside')) {
+        var labelUnionRect = estimateLabelUnionRect(axis);
+
+        if (labelUnionRect) {
+          var dim = axis.isHorizontal() ? 'height' : 'width';
+          var margin = axis.model.get('axisLabel.margin');
+          gridRect[dim] -= labelUnionRect[dim] + margin;
+
+          if (axis.position === 'top') {
+            gridRect.y += labelUnionRect.height + margin;
+          } else if (axis.position === 'left') {
+            gridRect.x += labelUnionRect.width + margin;
+          }
+        }
+      }
+    });
+    adjustAxes();
+  }
+
+  function adjustAxes() {
+    each$1(axesList, function (axis) {
+      var isHorizontal = axis.isHorizontal();
+      var extent = isHorizontal ? [0, gridRect.width] : [0, gridRect.height];
+      var idx = axis.inverse ? 1 : 0;
+      axis.setExtent(extent[idx], extent[1 - idx]);
+      updateAxisTransform(axis, isHorizontal ? gridRect.x : gridRect.y);
+    });
+  }
+};
+/**
+ * @param {string} axisType
+ * @param {number} [axisIndex]
+ */
+
+
+gridProto.getAxis = function (axisType, axisIndex) {
+  var axesMapOnDim = this._axesMap[axisType];
+
+  if (axesMapOnDim != null) {
+    if (axisIndex == null) {
+      // Find first axis
+      for (var name in axesMapOnDim) {
+        if (axesMapOnDim.hasOwnProperty(name)) {
+          return axesMapOnDim[name];
+        }
+      }
+    }
+
+    return axesMapOnDim[axisIndex];
+  }
+};
+/**
+ * @return {Array.<module:echarts/coord/Axis>}
+ */
+
+
+gridProto.getAxes = function () {
+  return this._axesList.slice();
+};
+/**
+ * Usage:
+ *      grid.getCartesian(xAxisIndex, yAxisIndex);
+ *      grid.getCartesian(xAxisIndex);
+ *      grid.getCartesian(null, yAxisIndex);
+ *      grid.getCartesian({xAxisIndex: ..., yAxisIndex: ...});
+ *
+ * @param {number|Object} [xAxisIndex]
+ * @param {number} [yAxisIndex]
+ */
+
+
+gridProto.getCartesian = function (xAxisIndex, yAxisIndex) {
+  if (xAxisIndex != null && yAxisIndex != null) {
+    var key = 'x' + xAxisIndex + 'y' + yAxisIndex;
+    return this._coordsMap[key];
+  }
+
+  if (isObject$1(xAxisIndex)) {
+    yAxisIndex = xAxisIndex.yAxisIndex;
+    xAxisIndex = xAxisIndex.xAxisIndex;
+  } // When only xAxisIndex or yAxisIndex given, find its first cartesian.
+
+
+  for (var i = 0, coordList = this._coordsList; i < coordList.length; i++) {
+    if (coordList[i].getAxis('x').index === xAxisIndex || coordList[i].getAxis('y').index === yAxisIndex) {
+      return coordList[i];
+    }
+  }
+};
+
+gridProto.getCartesians = function () {
+  return this._coordsList.slice();
+};
+/**
+ * @implements
+ * see {module:echarts/CoodinateSystem}
+ */
+
+
+gridProto.convertToPixel = function (ecModel, finder, value) {
+  var target = this._findConvertTarget(ecModel, finder);
+
+  return target.cartesian ? target.cartesian.dataToPoint(value) : target.axis ? target.axis.toGlobalCoord(target.axis.dataToCoord(value)) : null;
+};
+/**
+ * @implements
+ * see {module:echarts/CoodinateSystem}
+ */
+
+
+gridProto.convertFromPixel = function (ecModel, finder, value) {
+  var target = this._findConvertTarget(ecModel, finder);
+
+  return target.cartesian ? target.cartesian.pointToData(value) : target.axis ? target.axis.coordToData(target.axis.toLocalCoord(value)) : null;
+};
+/**
+ * @inner
+ */
+
+
+gridProto._findConvertTarget = function (ecModel, finder) {
+  var seriesModel = finder.seriesModel;
+  var xAxisModel = finder.xAxisModel || seriesModel && seriesModel.getReferringComponents('xAxis')[0];
+  var yAxisModel = finder.yAxisModel || seriesModel && seriesModel.getReferringComponents('yAxis')[0];
+  var gridModel = finder.gridModel;
+  var coordsList = this._coordsList;
+  var cartesian;
+  var axis;
+
+  if (seriesModel) {
+    cartesian = seriesModel.coordinateSystem;
+    indexOf(coordsList, cartesian) < 0 && (cartesian = null);
+  } else if (xAxisModel && yAxisModel) {
+    cartesian = this.getCartesian(xAxisModel.componentIndex, yAxisModel.componentIndex);
+  } else if (xAxisModel) {
+    axis = this.getAxis('x', xAxisModel.componentIndex);
+  } else if (yAxisModel) {
+    axis = this.getAxis('y', yAxisModel.componentIndex);
+  } // Lowest priority.
+  else if (gridModel) {
+      var grid = gridModel.coordinateSystem;
+
+      if (grid === this) {
+        cartesian = this._coordsList[0];
+      }
+    }
+
+  return {
+    cartesian: cartesian,
+    axis: axis
+  };
+};
+/**
+ * @implements
+ * see {module:echarts/CoodinateSystem}
+ */
+
+
+gridProto.containPoint = function (point) {
+  var coord = this._coordsList[0];
+
+  if (coord) {
+    return coord.containPoint(point);
+  }
+};
+/**
+ * Initialize cartesian coordinate systems
+ * @private
+ */
+
+
+gridProto._initCartesian = function (gridModel, ecModel, api) {
+  var axisPositionUsed = {
+    left: false,
+    right: false,
+    top: false,
+    bottom: false
+  };
+  var axesMap = {
+    x: {},
+    y: {}
+  };
+  var axesCount = {
+    x: 0,
+    y: 0
+  }; /// Create axis
+
+  ecModel.eachComponent('xAxis', createAxisCreator('x'), this);
+  ecModel.eachComponent('yAxis', createAxisCreator('y'), this);
+
+  if (!axesCount.x || !axesCount.y) {
+    // Roll back when there no either x or y axis
+    this._axesMap = {};
+    this._axesList = [];
+    return;
+  }
+
+  this._axesMap = axesMap; /// Create cartesian2d
+
+  each$1(axesMap.x, function (xAxis, xAxisIndex) {
+    each$1(axesMap.y, function (yAxis, yAxisIndex) {
+      var key = 'x' + xAxisIndex + 'y' + yAxisIndex;
+      var cartesian = new Cartesian2D(key);
+      cartesian.grid = this;
+      cartesian.model = gridModel;
+      this._coordsMap[key] = cartesian;
+
+      this._coordsList.push(cartesian);
+
+      cartesian.addAxis(xAxis);
+      cartesian.addAxis(yAxis);
+    }, this);
+  }, this);
+
+  function createAxisCreator(axisType) {
+    return function (axisModel, idx) {
+      if (!isAxisUsedInTheGrid(axisModel, gridModel, ecModel)) {
+        return;
+      }
+
+      var axisPosition = axisModel.get('position');
+
+      if (axisType === 'x') {
+        // Fix position
+        if (axisPosition !== 'top' && axisPosition !== 'bottom') {
+          // Default bottom of X
+          axisPosition = 'bottom';
+
+          if (axisPositionUsed[axisPosition]) {
+            axisPosition = axisPosition === 'top' ? 'bottom' : 'top';
+          }
+        }
+      } else {
+        // Fix position
+        if (axisPosition !== 'left' && axisPosition !== 'right') {
+          // Default left of Y
+          axisPosition = 'left';
+
+          if (axisPositionUsed[axisPosition]) {
+            axisPosition = axisPosition === 'left' ? 'right' : 'left';
+          }
+        }
+      }
+
+      axisPositionUsed[axisPosition] = true;
+      var axis = new Axis2D(axisType, createScaleByModel(axisModel), [0, 0], axisModel.get('type'), axisPosition);
+      var isCategory = axis.type === 'category';
+      axis.onBand = isCategory && axisModel.get('boundaryGap');
+      axis.inverse = axisModel.get('inverse'); // Inject axis into axisModel
+
+      axisModel.axis = axis; // Inject axisModel into axis
+
+      axis.model = axisModel; // Inject grid info axis
+
+      axis.grid = this; // Index of axis, can be used as key
+
+      axis.index = idx;
+
+      this._axesList.push(axis);
+
+      axesMap[axisType][idx] = axis;
+      axesCount[axisType]++;
+    };
+  }
+};
+/**
+ * Update cartesian properties from series
+ * @param  {module:echarts/model/Option} option
+ * @private
+ */
+
+
+gridProto._updateScale = function (ecModel, gridModel) {
+  // Reset scale
+  each$1(this._axesList, function (axis) {
+    axis.scale.setExtent(Infinity, -Infinity);
+  });
+  ecModel.eachSeries(function (seriesModel) {
+    if (isCartesian2D(seriesModel)) {
+      var axesModels = findAxesModels(seriesModel, ecModel);
+      var xAxisModel = axesModels[0];
+      var yAxisModel = axesModels[1];
+
+      if (!isAxisUsedInTheGrid(xAxisModel, gridModel, ecModel) || !isAxisUsedInTheGrid(yAxisModel, gridModel, ecModel)) {
+        return;
+      }
+
+      var cartesian = this.getCartesian(xAxisModel.componentIndex, yAxisModel.componentIndex);
+      var data = seriesModel.getData();
+      var xAxis = cartesian.getAxis('x');
+      var yAxis = cartesian.getAxis('y');
+
+      if (data.type === 'list') {
+        unionExtent(data, xAxis, seriesModel);
+        unionExtent(data, yAxis, seriesModel);
+      }
+    }
+  }, this);
+
+  function unionExtent(data, axis, seriesModel) {
+    each$1(data.mapDimension(axis.dim, true), function (dim) {
+      axis.scale.unionExtentFromData( // For example, the extent of the orginal dimension
+      // is [0.1, 0.5], the extent of the `stackResultDimension`
+      // is [7, 9], the final extent should not include [0.1, 0.5].
+      data, getStackedDimension(data, dim));
+    });
+  }
+};
+/**
+ * @param {string} [dim] 'x' or 'y' or 'auto' or null/undefined
+ * @return {Object} {baseAxes: [], otherAxes: []}
+ */
+
+
+gridProto.getTooltipAxes = function (dim) {
+  var baseAxes = [];
+  var otherAxes = [];
+  each$1(this.getCartesians(), function (cartesian) {
+    var baseAxis = dim != null && dim !== 'auto' ? cartesian.getAxis(dim) : cartesian.getBaseAxis();
+    var otherAxis = cartesian.getOtherAxis(baseAxis);
+    indexOf(baseAxes, baseAxis) < 0 && baseAxes.push(baseAxis);
+    indexOf(otherAxes, otherAxis) < 0 && otherAxes.push(otherAxis);
+  });
+  return {
+    baseAxes: baseAxes,
+    otherAxes: otherAxes
+  };
+};
+/**
+ * @inner
+ */
+
+
+function updateAxisTransform(axis, coordBase) {
+  var axisExtent = axis.getExtent();
+  var axisExtentSum = axisExtent[0] + axisExtent[1]; // Fast transform
+
+  axis.toGlobalCoord = axis.dim === 'x' ? function (coord) {
+    return coord + coordBase;
+  } : function (coord) {
+    return axisExtentSum - coord + coordBase;
+  };
+  axis.toLocalCoord = axis.dim === 'x' ? function (coord) {
+    return coord - coordBase;
+  } : function (coord) {
+    return axisExtentSum - coord + coordBase;
+  };
+}
+
+var axesTypes = ['xAxis', 'yAxis'];
+/**
+ * @inner
+ */
+
+function findAxesModels(seriesModel, ecModel) {
+  return map(axesTypes, function (axisType) {
+    var axisModel = seriesModel.getReferringComponents(axisType)[0];
+    return axisModel;
+  });
+}
+/**
+ * @inner
+ */
+
+
+function isCartesian2D(seriesModel) {
+  return seriesModel.get('coordinateSystem') === 'cartesian2d';
+}
+
+Grid.create = function (ecModel, api) {
+  var grids = [];
+  ecModel.eachComponent('grid', function (gridModel, idx) {
+    var grid = new Grid(gridModel, ecModel, api);
+    grid.name = 'grid_' + idx; // dataSampling requires axis extent, so resize
+    // should be performed in create stage.
+
+    grid.resize(gridModel, api, true);
+    gridModel.coordinateSystem = grid;
+    grids.push(grid);
+  }); // Inject the coordinateSystems into seriesModel
+
+  ecModel.eachSeries(function (seriesModel) {
+    if (!isCartesian2D(seriesModel)) {
+      return;
+    }
+
+    var axesModels = findAxesModels(seriesModel, ecModel);
+    var xAxisModel = axesModels[0];
+    var yAxisModel = axesModels[1];
+    var gridModel = xAxisModel.getCoordSysModel();
+    var grid = gridModel.coordinateSystem;
+    seriesModel.coordinateSystem = grid.getCartesian(xAxisModel.componentIndex, yAxisModel.componentIndex);
+  });
+  return grids;
+}; // For deciding which dimensions to use when creating list data
+
+
+Grid.dimensions = Grid.prototype.dimensions = Cartesian2D.prototype.dimensions;
+CoordinateSystemManager.register('cartesian2d', Grid);
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+var PI$2 = Math.PI;
+
+function makeAxisEventDataBase(axisModel) {
+  var eventData = {
+    componentType: axisModel.mainType,
+    componentIndex: axisModel.componentIndex
+  };
+  eventData[axisModel.mainType + 'Index'] = axisModel.componentIndex;
+  return eventData;
+}
+/**
+ * A final axis is translated and rotated from a "standard axis".
+ * So opt.position and opt.rotation is required.
+ *
+ * A standard axis is and axis from [0, 0] to [0, axisExtent[1]],
+ * for example: (0, 0) ------------> (0, 50)
+ *
+ * nameDirection or tickDirection or labelDirection is 1 means tick
+ * or label is below the standard axis, whereas is -1 means above
+ * the standard axis. labelOffset means offset between label and axis,
+ * which is useful when 'onZero', where axisLabel is in the grid and
+ * label in outside grid.
+ *
+ * Tips: like always,
+ * positive rotation represents anticlockwise, and negative rotation
+ * represents clockwise.
+ * The direction of position coordinate is the same as the direction
+ * of screen coordinate.
+ *
+ * Do not need to consider axis 'inverse', which is auto processed by
+ * axis extent.
+ *
+ * @param {module:zrender/container/Group} group
+ * @param {Object} axisModel
+ * @param {Object} opt Standard axis parameters.
+ * @param {Array.<number>} opt.position [x, y]
+ * @param {number} opt.rotation by radian
+ * @param {number} [opt.nameDirection=1] 1 or -1 Used when nameLocation is 'middle' or 'center'.
+ * @param {number} [opt.tickDirection=1] 1 or -1
+ * @param {number} [opt.labelDirection=1] 1 or -1
+ * @param {number} [opt.labelOffset=0] Usefull when onZero.
+ * @param {string} [opt.axisLabelShow] default get from axisModel.
+ * @param {string} [opt.axisName] default get from axisModel.
+ * @param {number} [opt.axisNameAvailableWidth]
+ * @param {number} [opt.labelRotate] by degree, default get from axisModel.
+ * @param {number} [opt.strokeContainThreshold] Default label interval when label
+ * @param {number} [opt.nameTruncateMaxWidth]
+ */
+
+
+var AxisBuilder = function (axisModel, opt) {
+  /**
+   * @readOnly
+   */
+  this.opt = opt;
+  /**
+   * @readOnly
+   */
+
+  this.axisModel = axisModel; // Default value
+
+  defaults(opt, {
+    labelOffset: 0,
+    nameDirection: 1,
+    tickDirection: 1,
+    labelDirection: 1,
+    silent: true
+  });
+  /**
+   * @readOnly
+   */
+
+  this.group = new Group(); // FIXME Not use a seperate text group?
+
+  var dumbGroup = new Group({
+    position: opt.position.slice(),
+    rotation: opt.rotation
+  }); // this.group.add(dumbGroup);
+  // this._dumbGroup = dumbGroup;
+
+  dumbGroup.updateTransform();
+  this._transform = dumbGroup.transform;
+  this._dumbGroup = dumbGroup;
+};
+
+AxisBuilder.prototype = {
+  constructor: AxisBuilder,
+  hasBuilder: function (name) {
+    return !!builders[name];
+  },
+  add: function (name) {
+    builders[name].call(this);
+  },
+  getGroup: function () {
+    return this.group;
+  }
+};
+var builders = {
+  /**
+   * @private
+   */
+  axisLine: function () {
+    var opt = this.opt;
+    var axisModel = this.axisModel;
+
+    if (!axisModel.get('axisLine.show')) {
+      return;
+    }
+
+    var extent = this.axisModel.axis.getExtent();
+    var matrix = this._transform;
+    var pt1 = [extent[0], 0];
+    var pt2 = [extent[1], 0];
+
+    if (matrix) {
+      applyTransform(pt1, pt1, matrix);
+      applyTransform(pt2, pt2, matrix);
+    }
+
+    var lineStyle = extend({
+      lineCap: 'round'
+    }, axisModel.getModel('axisLine.lineStyle').getLineStyle());
+    this.group.add(new Line(subPixelOptimizeLine({
+      // Id for animation
+      anid: 'line',
+      shape: {
+        x1: pt1[0],
+        y1: pt1[1],
+        x2: pt2[0],
+        y2: pt2[1]
+      },
+      style: lineStyle,
+      strokeContainThreshold: opt.strokeContainThreshold || 5,
+      silent: true,
+      z2: 1
+    })));
+    var arrows = axisModel.get('axisLine.symbol');
+    var arrowSize = axisModel.get('axisLine.symbolSize');
+    var arrowOffset = axisModel.get('axisLine.symbolOffset') || 0;
+
+    if (typeof arrowOffset === 'number') {
+      arrowOffset = [arrowOffset, arrowOffset];
+    }
+
+    if (arrows != null) {
+      if (typeof arrows === 'string') {
+        // Use the same arrow for start and end point
+        arrows = [arrows, arrows];
+      }
+
+      if (typeof arrowSize === 'string' || typeof arrowSize === 'number') {
+        // Use the same size for width and height
+        arrowSize = [arrowSize, arrowSize];
+      }
+
+      var symbolWidth = arrowSize[0];
+      var symbolHeight = arrowSize[1];
+      each$1([{
+        rotate: opt.rotation + Math.PI / 2,
+        offset: arrowOffset[0],
+        r: 0
+      }, {
+        rotate: opt.rotation - Math.PI / 2,
+        offset: arrowOffset[1],
+        r: Math.sqrt((pt1[0] - pt2[0]) * (pt1[0] - pt2[0]) + (pt1[1] - pt2[1]) * (pt1[1] - pt2[1]))
+      }], function (point, index) {
+        if (arrows[index] !== 'none' && arrows[index] != null) {
+          var symbol = createSymbol(arrows[index], -symbolWidth / 2, -symbolHeight / 2, symbolWidth, symbolHeight, lineStyle.stroke, true); // Calculate arrow position with offset
+
+          var r = point.r + point.offset;
+          var pos = [pt1[0] + r * Math.cos(opt.rotation), pt1[1] - r * Math.sin(opt.rotation)];
+          symbol.attr({
+            rotation: point.rotate,
+            position: pos,
+            silent: true,
+            z2: 11
+          });
+          this.group.add(symbol);
+        }
+      }, this);
+    }
+  },
+
+  /**
+   * @private
+   */
+  axisTickLabel: function () {
+    var axisModel = this.axisModel;
+    var opt = this.opt;
+    var tickEls = buildAxisTick(this, axisModel, opt);
+    var labelEls = buildAxisLabel(this, axisModel, opt);
+    fixMinMaxLabelShow(axisModel, labelEls, tickEls);
+  },
+
+  /**
+   * @private
+   */
+  axisName: function () {
+    var opt = this.opt;
+    var axisModel = this.axisModel;
+    var name = retrieve(opt.axisName, axisModel.get('name'));
+
+    if (!name) {
+      return;
+    }
+
+    var nameLocation = axisModel.get('nameLocation');
+    var nameDirection = opt.nameDirection;
+    var textStyleModel = axisModel.getModel('nameTextStyle');
+    var gap = axisModel.get('nameGap') || 0;
+    var extent = this.axisModel.axis.getExtent();
+    var gapSignal = extent[0] > extent[1] ? -1 : 1;
+    var pos = [nameLocation === 'start' ? extent[0] - gapSignal * gap : nameLocation === 'end' ? extent[1] + gapSignal * gap : (extent[0] + extent[1]) / 2, // 'middle'
+    // Reuse labelOffset.
+    isNameLocationCenter(nameLocation) ? opt.labelOffset + nameDirection * gap : 0];
+    var labelLayout;
+    var nameRotation = axisModel.get('nameRotate');
+
+    if (nameRotation != null) {
+      nameRotation = nameRotation * PI$2 / 180; // To radian.
+    }
+
+    var axisNameAvailableWidth;
+
+    if (isNameLocationCenter(nameLocation)) {
+      labelLayout = innerTextLayout(opt.rotation, nameRotation != null ? nameRotation : opt.rotation, // Adapt to axis.
+      nameDirection);
+    } else {
+      labelLayout = endTextLayout(opt, nameLocation, nameRotation || 0, extent);
+      axisNameAvailableWidth = opt.axisNameAvailableWidth;
+
+      if (axisNameAvailableWidth != null) {
+        axisNameAvailableWidth = Math.abs(axisNameAvailableWidth / Math.sin(labelLayout.rotation));
+        !isFinite(axisNameAvailableWidth) && (axisNameAvailableWidth = null);
+      }
+    }
+
+    var textFont = textStyleModel.getFont();
+    var truncateOpt = axisModel.get('nameTruncate', true) || {};
+    var ellipsis = truncateOpt.ellipsis;
+    var maxWidth = retrieve(opt.nameTruncateMaxWidth, truncateOpt.maxWidth, axisNameAvailableWidth); // FIXME
+    // truncate rich text? (consider performance)
+
+    var truncatedText = ellipsis != null && maxWidth != null ? truncateText$1(name, maxWidth, textFont, ellipsis, {
+      minChar: 2,
+      placeholder: truncateOpt.placeholder
+    }) : name;
+    var tooltipOpt = axisModel.get('tooltip', true);
+    var mainType = axisModel.mainType;
+    var formatterParams = {
+      componentType: mainType,
+      name: name,
+      $vars: ['name']
+    };
+    formatterParams[mainType + 'Index'] = axisModel.componentIndex;
+    var textEl = new Text({
+      // Id for animation
+      anid: 'name',
+      __fullText: name,
+      __truncatedText: truncatedText,
+      position: pos,
+      rotation: labelLayout.rotation,
+      silent: isSilent(axisModel),
+      z2: 1,
+      tooltip: tooltipOpt && tooltipOpt.show ? extend({
+        content: name,
+        formatter: function () {
+          return name;
+        },
+        formatterParams: formatterParams
+      }, tooltipOpt) : null
+    });
+    setTextStyle(textEl.style, textStyleModel, {
+      text: truncatedText,
+      textFont: textFont,
+      textFill: textStyleModel.getTextColor() || axisModel.get('axisLine.lineStyle.color'),
+      textAlign: labelLayout.textAlign,
+      textVerticalAlign: labelLayout.textVerticalAlign
+    });
+
+    if (axisModel.get('triggerEvent')) {
+      textEl.eventData = makeAxisEventDataBase(axisModel);
+      textEl.eventData.targetType = 'axisName';
+      textEl.eventData.name = name;
+    } // FIXME
+
+
+    this._dumbGroup.add(textEl);
+
+    textEl.updateTransform();
+    this.group.add(textEl);
+    textEl.decomposeTransform();
+  }
+};
+/**
+ * @public
+ * @static
+ * @param {Object} opt
+ * @param {number} axisRotation in radian
+ * @param {number} textRotation in radian
+ * @param {number} direction
+ * @return {Object} {
+ *  rotation, // according to axis
+ *  textAlign,
+ *  textVerticalAlign
+ * }
+ */
+
+var innerTextLayout = AxisBuilder.innerTextLayout = function (axisRotation, textRotation, direction) {
+  var rotationDiff = remRadian(textRotation - axisRotation);
+  var textAlign;
+  var textVerticalAlign;
+
+  if (isRadianAroundZero(rotationDiff)) {
+    // Label is parallel with axis line.
+    textVerticalAlign = direction > 0 ? 'top' : 'bottom';
+    textAlign = 'center';
+  } else if (isRadianAroundZero(rotationDiff - PI$2)) {
+    // Label is inverse parallel with axis line.
+    textVerticalAlign = direction > 0 ? 'bottom' : 'top';
+    textAlign = 'center';
+  } else {
+    textVerticalAlign = 'middle';
+
+    if (rotationDiff > 0 && rotationDiff < PI$2) {
+      textAlign = direction > 0 ? 'right' : 'left';
+    } else {
+      textAlign = direction > 0 ? 'left' : 'right';
+    }
+  }
+
+  return {
+    rotation: rotationDiff,
+    textAlign: textAlign,
+    textVerticalAlign: textVerticalAlign
+  };
+};
+
+function endTextLayout(opt, textPosition, textRotate, extent) {
+  var rotationDiff = remRadian(textRotate - opt.rotation);
+  var textAlign;
+  var textVerticalAlign;
+  var inverse = extent[0] > extent[1];
+  var onLeft = textPosition === 'start' && !inverse || textPosition !== 'start' && inverse;
+
+  if (isRadianAroundZero(rotationDiff - PI$2 / 2)) {
+    textVerticalAlign = onLeft ? 'bottom' : 'top';
+    textAlign = 'center';
+  } else if (isRadianAroundZero(rotationDiff - PI$2 * 1.5)) {
+    textVerticalAlign = onLeft ? 'top' : 'bottom';
+    textAlign = 'center';
+  } else {
+    textVerticalAlign = 'middle';
+
+    if (rotationDiff < PI$2 * 1.5 && rotationDiff > PI$2 / 2) {
+      textAlign = onLeft ? 'left' : 'right';
+    } else {
+      textAlign = onLeft ? 'right' : 'left';
+    }
+  }
+
+  return {
+    rotation: rotationDiff,
+    textAlign: textAlign,
+    textVerticalAlign: textVerticalAlign
+  };
+}
+
+function isSilent(axisModel) {
+  var tooltipOpt = axisModel.get('tooltip');
+  return axisModel.get('silent') // Consider mouse cursor, add these restrictions.
+  || !(axisModel.get('triggerEvent') || tooltipOpt && tooltipOpt.show);
+}
+
+function fixMinMaxLabelShow(axisModel, labelEls, tickEls) {
+  if (shouldShowAllLabels(axisModel.axis)) {
+    return;
+  } // If min or max are user set, we need to check
+  // If the tick on min(max) are overlap on their neighbour tick
+  // If they are overlapped, we need to hide the min(max) tick label
+
+
+  var showMinLabel = axisModel.get('axisLabel.showMinLabel');
+  var showMaxLabel = axisModel.get('axisLabel.showMaxLabel'); // FIXME
+  // Have not consider onBand yet, where tick els is more than label els.
+
+  labelEls = labelEls || [];
+  tickEls = tickEls || [];
+  var firstLabel = labelEls[0];
+  var nextLabel = labelEls[1];
+  var lastLabel = labelEls[labelEls.length - 1];
+  var prevLabel = labelEls[labelEls.length - 2];
+  var firstTick = tickEls[0];
+  var nextTick = tickEls[1];
+  var lastTick = tickEls[tickEls.length - 1];
+  var prevTick = tickEls[tickEls.length - 2];
+
+  if (showMinLabel === false) {
+    ignoreEl(firstLabel);
+    ignoreEl(firstTick);
+  } else if (isTwoLabelOverlapped(firstLabel, nextLabel)) {
+    if (showMinLabel) {
+      ignoreEl(nextLabel);
+      ignoreEl(nextTick);
+    } else {
+      ignoreEl(firstLabel);
+      ignoreEl(firstTick);
+    }
+  }
+
+  if (showMaxLabel === false) {
+    ignoreEl(lastLabel);
+    ignoreEl(lastTick);
+  } else if (isTwoLabelOverlapped(prevLabel, lastLabel)) {
+    if (showMaxLabel) {
+      ignoreEl(prevLabel);
+      ignoreEl(prevTick);
+    } else {
+      ignoreEl(lastLabel);
+      ignoreEl(lastTick);
+    }
+  }
+}
+
+function ignoreEl(el) {
+  el && (el.ignore = true);
+}
+
+function isTwoLabelOverlapped(current, next, labelLayout) {
+  // current and next has the same rotation.
+  var firstRect = current && current.getBoundingRect().clone();
+  var nextRect = next && next.getBoundingRect().clone();
+
+  if (!firstRect || !nextRect) {
+    return;
+  } // When checking intersect of two rotated labels, we use mRotationBack
+  // to avoid that boundingRect is enlarge when using `boundingRect.applyTransform`.
+
+
+  var mRotationBack = identity([]);
+  rotate(mRotationBack, mRotationBack, -current.rotation);
+  firstRect.applyTransform(mul$1([], mRotationBack, current.getLocalTransform()));
+  nextRect.applyTransform(mul$1([], mRotationBack, next.getLocalTransform()));
+  return firstRect.intersect(nextRect);
+}
+
+function isNameLocationCenter(nameLocation) {
+  return nameLocation === 'middle' || nameLocation === 'center';
+}
+
+function buildAxisTick(axisBuilder, axisModel, opt) {
+  var axis = axisModel.axis;
+
+  if (!axisModel.get('axisTick.show') || axis.scale.isBlank()) {
+    return;
+  }
+
+  var tickModel = axisModel.getModel('axisTick');
+  var lineStyleModel = tickModel.getModel('lineStyle');
+  var tickLen = tickModel.get('length');
+  var ticksCoords = axis.getTicksCoords();
+  var pt1 = [];
+  var pt2 = [];
+  var matrix = axisBuilder._transform;
+  var tickEls = [];
+
+  for (var i = 0; i < ticksCoords.length; i++) {
+    var tickCoord = ticksCoords[i].coord;
+    pt1[0] = tickCoord;
+    pt1[1] = 0;
+    pt2[0] = tickCoord;
+    pt2[1] = opt.tickDirection * tickLen;
+
+    if (matrix) {
+      applyTransform(pt1, pt1, matrix);
+      applyTransform(pt2, pt2, matrix);
+    } // Tick line, Not use group transform to have better line draw
+
+
+    var tickEl = new Line(subPixelOptimizeLine({
+      // Id for animation
+      anid: 'tick_' + ticksCoords[i].tickValue,
+      shape: {
+        x1: pt1[0],
+        y1: pt1[1],
+        x2: pt2[0],
+        y2: pt2[1]
+      },
+      style: defaults(lineStyleModel.getLineStyle(), {
+        stroke: axisModel.get('axisLine.lineStyle.color')
+      }),
+      z2: 2,
+      silent: true
+    }));
+    axisBuilder.group.add(tickEl);
+    tickEls.push(tickEl);
+  }
+
+  return tickEls;
+}
+
+function buildAxisLabel(axisBuilder, axisModel, opt) {
+  var axis = axisModel.axis;
+  var show = retrieve(opt.axisLabelShow, axisModel.get('axisLabel.show'));
+
+  if (!show || axis.scale.isBlank()) {
+    return;
+  }
+
+  var labelModel = axisModel.getModel('axisLabel');
+  var labelMargin = labelModel.get('margin');
+  var labels = axis.getViewLabels(); // Special label rotate.
+
+  var labelRotation = (retrieve(opt.labelRotate, labelModel.get('rotate')) || 0) * PI$2 / 180;
+  var labelLayout = innerTextLayout(opt.rotation, labelRotation, opt.labelDirection);
+  var rawCategoryData = axisModel.getCategories(true);
+  var labelEls = [];
+  var silent = isSilent(axisModel);
+  var triggerEvent = axisModel.get('triggerEvent');
+  each$1(labels, function (labelItem, index) {
+    var tickValue = labelItem.tickValue;
+    var formattedLabel = labelItem.formattedLabel;
+    var rawLabel = labelItem.rawLabel;
+    var itemLabelModel = labelModel;
+
+    if (rawCategoryData && rawCategoryData[tickValue] && rawCategoryData[tickValue].textStyle) {
+      itemLabelModel = new Model(rawCategoryData[tickValue].textStyle, labelModel, axisModel.ecModel);
+    }
+
+    var textColor = itemLabelModel.getTextColor() || axisModel.get('axisLine.lineStyle.color');
+    var tickCoord = axis.dataToCoord(tickValue);
+    var pos = [tickCoord, opt.labelOffset + opt.labelDirection * labelMargin];
+    var textEl = new Text({
+      // Id for animation
+      anid: 'label_' + tickValue,
+      position: pos,
+      rotation: labelLayout.rotation,
+      silent: silent,
+      z2: 10
+    });
+    setTextStyle(textEl.style, itemLabelModel, {
+      text: formattedLabel,
+      textAlign: itemLabelModel.getShallow('align', true) || labelLayout.textAlign,
+      textVerticalAlign: itemLabelModel.getShallow('verticalAlign', true) || itemLabelModel.getShallow('baseline', true) || labelLayout.textVerticalAlign,
+      textFill: typeof textColor === 'function' ? textColor( // (1) In category axis with data zoom, tick is not the original
+      // index of axis.data. So tick should not be exposed to user
+      // in category axis.
+      // (2) Compatible with previous version, which always use formatted label as
+      // input. But in interval scale the formatted label is like '223,445', which
+      // maked user repalce ','. So we modify it to return original val but remain
+      // it as 'string' to avoid error in replacing.
+      axis.type === 'category' ? rawLabel : axis.type === 'value' ? tickValue + '' : tickValue, index) : textColor
+    }); // Pack data for mouse event
+
+    if (triggerEvent) {
+      textEl.eventData = makeAxisEventDataBase(axisModel);
+      textEl.eventData.targetType = 'axisLabel';
+      textEl.eventData.value = rawLabel;
+    } // FIXME
+
+
+    axisBuilder._dumbGroup.add(textEl);
+
+    textEl.updateTransform();
+    labelEls.push(textEl);
+    axisBuilder.group.add(textEl);
+    textEl.decomposeTransform();
+  });
+  return labelEls;
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+var each$6 = each$1;
+var curry$1 = curry; // Build axisPointerModel, mergin tooltip.axisPointer model for each axis.
+// allAxesInfo should be updated when setOption performed.
+
+function collect(ecModel, api) {
+  var result = {
+    /**
+     * key: makeKey(axis.model)
+     * value: {
+     *      axis,
+     *      coordSys,
+     *      axisPointerModel,
+     *      triggerTooltip,
+     *      involveSeries,
+     *      snap,
+     *      seriesModels,
+     *      seriesDataCount
+     * }
+     */
+    axesInfo: {},
+    seriesInvolved: false,
+
+    /**
+     * key: makeKey(coordSys.model)
+     * value: Object: key makeKey(axis.model), value: axisInfo
+     */
+    coordSysAxesInfo: {},
+    coordSysMap: {}
+  };
+  collectAxesInfo(result, ecModel, api); // Check seriesInvolved for performance, in case too many series in some chart.
+
+  result.seriesInvolved && collectSeriesInfo(result, ecModel);
+  return result;
+}
+
+function collectAxesInfo(result, ecModel, api) {
+  var globalTooltipModel = ecModel.getComponent('tooltip');
+  var globalAxisPointerModel = ecModel.getComponent('axisPointer'); // links can only be set on global.
+
+  var linksOption = globalAxisPointerModel.get('link', true) || [];
+  var linkGroups = []; // Collect axes info.
+
+  each$6(api.getCoordinateSystems(), function (coordSys) {
+    // Some coordinate system do not support axes, like geo.
+    if (!coordSys.axisPointerEnabled) {
+      return;
+    }
+
+    var coordSysKey = makeKey(coordSys.model);
+    var axesInfoInCoordSys = result.coordSysAxesInfo[coordSysKey] = {};
+    result.coordSysMap[coordSysKey] = coordSys; // Set tooltip (like 'cross') is a convienent way to show axisPointer
+    // for user. So we enable seting tooltip on coordSys model.
+
+    var coordSysModel = coordSys.model;
+    var baseTooltipModel = coordSysModel.getModel('tooltip', globalTooltipModel);
+    each$6(coordSys.getAxes(), curry$1(saveTooltipAxisInfo, false, null)); // If axis tooltip used, choose tooltip axis for each coordSys.
+    // Notice this case: coordSys is `grid` but not `cartesian2D` here.
+
+    if (coordSys.getTooltipAxes && globalTooltipModel // If tooltip.showContent is set as false, tooltip will not
+    // show but axisPointer will show as normal.
+    && baseTooltipModel.get('show')) {
+      // Compatible with previous logic. But series.tooltip.trigger: 'axis'
+      // or series.data[n].tooltip.trigger: 'axis' are not support any more.
+      var triggerAxis = baseTooltipModel.get('trigger') === 'axis';
+      var cross = baseTooltipModel.get('axisPointer.type') === 'cross';
+      var tooltipAxes = coordSys.getTooltipAxes(baseTooltipModel.get('axisPointer.axis'));
+
+      if (triggerAxis || cross) {
+        each$6(tooltipAxes.baseAxes, curry$1(saveTooltipAxisInfo, cross ? 'cross' : true, triggerAxis));
+      }
+
+      if (cross) {
+        each$6(tooltipAxes.otherAxes, curry$1(saveTooltipAxisInfo, 'cross', false));
+      }
+    } // fromTooltip: true | false | 'cross'
+    // triggerTooltip: true | false | null
+
+
+    function saveTooltipAxisInfo(fromTooltip, triggerTooltip, axis) {
+      var axisPointerModel = axis.model.getModel('axisPointer', globalAxisPointerModel);
+      var axisPointerShow = axisPointerModel.get('show');
+
+      if (!axisPointerShow || axisPointerShow === 'auto' && !fromTooltip && !isHandleTrigger(axisPointerModel)) {
+        return;
+      }
+
+      if (triggerTooltip == null) {
+        triggerTooltip = axisPointerModel.get('triggerTooltip');
+      }
+
+      axisPointerModel = fromTooltip ? makeAxisPointerModel(axis, baseTooltipModel, globalAxisPointerModel, ecModel, fromTooltip, triggerTooltip) : axisPointerModel;
+      var snap = axisPointerModel.get('snap');
+      var key = makeKey(axis.model);
+      var involveSeries = triggerTooltip || snap || axis.type === 'category'; // If result.axesInfo[key] exist, override it (tooltip has higher priority).
+
+      var axisInfo = result.axesInfo[key] = {
+        key: key,
+        axis: axis,
+        coordSys: coordSys,
+        axisPointerModel: axisPointerModel,
+        triggerTooltip: triggerTooltip,
+        involveSeries: involveSeries,
+        snap: snap,
+        useHandle: isHandleTrigger(axisPointerModel),
+        seriesModels: []
+      };
+      axesInfoInCoordSys[key] = axisInfo;
+      result.seriesInvolved |= involveSeries;
+      var groupIndex = getLinkGroupIndex(linksOption, axis);
+
+      if (groupIndex != null) {
+        var linkGroup = linkGroups[groupIndex] || (linkGroups[groupIndex] = {
+          axesInfo: {}
+        });
+        linkGroup.axesInfo[key] = axisInfo;
+        linkGroup.mapper = linksOption[groupIndex].mapper;
+        axisInfo.linkGroup = linkGroup;
+      }
+    }
+  });
+}
+
+function makeAxisPointerModel(axis, baseTooltipModel, globalAxisPointerModel, ecModel, fromTooltip, triggerTooltip) {
+  var tooltipAxisPointerModel = baseTooltipModel.getModel('axisPointer');
+  var volatileOption = {};
+  each$6(['type', 'snap', 'lineStyle', 'shadowStyle', 'label', 'animation', 'animationDurationUpdate', 'animationEasingUpdate', 'z'], function (field) {
+    volatileOption[field] = clone(tooltipAxisPointerModel.get(field));
+  }); // category axis do not auto snap, otherwise some tick that do not
+  // has value can not be hovered. value/time/log axis default snap if
+  // triggered from tooltip and trigger tooltip.
+
+  volatileOption.snap = axis.type !== 'category' && !!triggerTooltip; // Compatibel with previous behavior, tooltip axis do not show label by default.
+  // Only these properties can be overrided from tooltip to axisPointer.
+
+  if (tooltipAxisPointerModel.get('type') === 'cross') {
+    volatileOption.type = 'line';
+  }
+
+  var labelOption = volatileOption.label || (volatileOption.label = {}); // Follow the convention, do not show label when triggered by tooltip by default.
+
+  labelOption.show == null && (labelOption.show = false);
+
+  if (fromTooltip === 'cross') {
+    // When 'cross', both axes show labels.
+    var tooltipAxisPointerLabelShow = tooltipAxisPointerModel.get('label.show');
+    labelOption.show = tooltipAxisPointerLabelShow != null ? tooltipAxisPointerLabelShow : true; // If triggerTooltip, this is a base axis, which should better not use cross style
+    // (cross style is dashed by default)
+
+    if (!triggerTooltip) {
+      var crossStyle = volatileOption.lineStyle = tooltipAxisPointerModel.get('crossStyle');
+      crossStyle && defaults(labelOption, crossStyle.textStyle);
+    }
+  }
+
+  return axis.model.getModel('axisPointer', new Model(volatileOption, globalAxisPointerModel, ecModel));
+}
+
+function collectSeriesInfo(result, ecModel) {
+  // Prepare data for axis trigger
+  ecModel.eachSeries(function (seriesModel) {
+    // Notice this case: this coordSys is `cartesian2D` but not `grid`.
+    var coordSys = seriesModel.coordinateSystem;
+    var seriesTooltipTrigger = seriesModel.get('tooltip.trigger', true);
+    var seriesTooltipShow = seriesModel.get('tooltip.show', true);
+
+    if (!coordSys || seriesTooltipTrigger === 'none' || seriesTooltipTrigger === false || seriesTooltipTrigger === 'item' || seriesTooltipShow === false || seriesModel.get('axisPointer.show', true) === false) {
+      return;
+    }
+
+    each$6(result.coordSysAxesInfo[makeKey(coordSys.model)], function (axisInfo) {
+      var axis = axisInfo.axis;
+
+      if (coordSys.getAxis(axis.dim) === axis) {
+        axisInfo.seriesModels.push(seriesModel);
+        axisInfo.seriesDataCount == null && (axisInfo.seriesDataCount = 0);
+        axisInfo.seriesDataCount += seriesModel.getData().count();
+      }
+    });
+  }, this);
+}
+/**
+ * For example:
+ * {
+ *     axisPointer: {
+ *         links: [{
+ *             xAxisIndex: [2, 4],
+ *             yAxisIndex: 'all'
+ *         }, {
+ *             xAxisId: ['a5', 'a7'],
+ *             xAxisName: 'xxx'
+ *         }]
+ *     }
+ * }
+ */
+
+
+function getLinkGroupIndex(linksOption, axis) {
+  var axisModel = axis.model;
+  var dim = axis.dim;
+
+  for (var i = 0; i < linksOption.length; i++) {
+    var linkOption = linksOption[i] || {};
+
+    if (checkPropInLink(linkOption[dim + 'AxisId'], axisModel.id) || checkPropInLink(linkOption[dim + 'AxisIndex'], axisModel.componentIndex) || checkPropInLink(linkOption[dim + 'AxisName'], axisModel.name)) {
+      return i;
+    }
+  }
+}
+
+function checkPropInLink(linkPropValue, axisPropValue) {
+  return linkPropValue === 'all' || isArray(linkPropValue) && indexOf(linkPropValue, axisPropValue) >= 0 || linkPropValue === axisPropValue;
+}
+
+function fixValue(axisModel) {
+  var axisInfo = getAxisInfo(axisModel);
+
+  if (!axisInfo) {
+    return;
+  }
+
+  var axisPointerModel = axisInfo.axisPointerModel;
+  var scale = axisInfo.axis.scale;
+  var option = axisPointerModel.option;
+  var status = axisPointerModel.get('status');
+  var value = axisPointerModel.get('value'); // Parse init value for category and time axis.
+
+  if (value != null) {
+    value = scale.parse(value);
+  }
+
+  var useHandle = isHandleTrigger(axisPointerModel); // If `handle` used, `axisPointer` will always be displayed, so value
+  // and status should be initialized.
+
+  if (status == null) {
+    option.status = useHandle ? 'show' : 'hide';
+  }
+
+  var extent = scale.getExtent().slice();
+  extent[0] > extent[1] && extent.reverse();
+
+  if ( // Pick a value on axis when initializing.
+  value == null // If both `handle` and `dataZoom` are used, value may be out of axis extent,
+  // where we should re-pick a value to keep `handle` displaying normally.
+  || value > extent[1]) {
+    // Make handle displayed on the end of the axis when init, which looks better.
+    value = extent[1];
+  }
+
+  if (value < extent[0]) {
+    value = extent[0];
+  }
+
+  option.value = value;
+
+  if (useHandle) {
+    option.status = axisInfo.axis.scale.isBlank() ? 'hide' : 'show';
+  }
+}
+function getAxisInfo(axisModel) {
+  var coordSysAxesInfo = (axisModel.ecModel.getComponent('axisPointer') || {}).coordSysAxesInfo;
+  return coordSysAxesInfo && coordSysAxesInfo.axesInfo[makeKey(axisModel)];
+}
+function getAxisPointerModel(axisModel) {
+  var axisInfo = getAxisInfo(axisModel);
+  return axisInfo && axisInfo.axisPointerModel;
+}
+
+function isHandleTrigger(axisPointerModel) {
+  return !!axisPointerModel.get('handle.show');
+}
+/**
+ * @param {module:echarts/model/Model} model
+ * @return {string} unique key
+ */
+
+
+function makeKey(model) {
+  return model.type + '||' + model.id;
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+/**
+ * Base class of AxisView.
+ */
+
+var AxisView = extendComponentView({
+  type: 'axis',
+
+  /**
+   * @private
+   */
+  _axisPointer: null,
+
+  /**
+   * @protected
+   * @type {string}
+   */
+  axisPointerClass: null,
+
+  /**
+   * @override
+   */
+  render: function (axisModel, ecModel, api, payload) {
+    // FIXME
+    // This process should proformed after coordinate systems updated
+    // (axis scale updated), and should be performed each time update.
+    // So put it here temporarily, although it is not appropriate to
+    // put a model-writing procedure in `view`.
+    this.axisPointerClass && fixValue(axisModel);
+    AxisView.superApply(this, 'render', arguments);
+    updateAxisPointer(this, axisModel, ecModel, api, payload, true);
+  },
+
+  /**
+   * Action handler.
+   * @public
+   * @param {module:echarts/coord/cartesian/AxisModel} axisModel
+   * @param {module:echarts/model/Global} ecModel
+   * @param {module:echarts/ExtensionAPI} api
+   * @param {Object} payload
+   */
+  updateAxisPointer: function (axisModel, ecModel, api, payload, force) {
+    updateAxisPointer(this, axisModel, ecModel, api, payload, false);
+  },
+
+  /**
+   * @override
+   */
+  remove: function (ecModel, api) {
+    var axisPointer = this._axisPointer;
+    axisPointer && axisPointer.remove(api);
+    AxisView.superApply(this, 'remove', arguments);
+  },
+
+  /**
+   * @override
+   */
+  dispose: function (ecModel, api) {
+    disposeAxisPointer(this, api);
+    AxisView.superApply(this, 'dispose', arguments);
+  }
+});
+
+function updateAxisPointer(axisView, axisModel, ecModel, api, payload, forceRender) {
+  var Clazz = AxisView.getAxisPointerClass(axisView.axisPointerClass);
+
+  if (!Clazz) {
+    return;
+  }
+
+  var axisPointerModel = getAxisPointerModel(axisModel);
+  axisPointerModel ? (axisView._axisPointer || (axisView._axisPointer = new Clazz())).render(axisModel, axisPointerModel, api, forceRender) : disposeAxisPointer(axisView, api);
+}
+
+function disposeAxisPointer(axisView, ecModel, api) {
+  var axisPointer = axisView._axisPointer;
+  axisPointer && axisPointer.dispose(ecModel, api);
+  axisView._axisPointer = null;
+}
+
+var axisPointerClazz = [];
+
+AxisView.registerAxisPointerClass = function (type, clazz) {
+  axisPointerClazz[type] = clazz;
+};
+
+AxisView.getAxisPointerClass = function (type) {
+  return type && axisPointerClazz[type];
+};
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+/**
+ * Can only be called after coordinate system creation stage.
+ * (Can be called before coordinate system update stage).
+ *
+ * @param {Object} opt {labelInside}
+ * @return {Object} {
+ *  position, rotation, labelDirection, labelOffset,
+ *  tickDirection, labelRotate, z2
+ * }
+ */
+
+function layout$1(gridModel, axisModel, opt) {
+  opt = opt || {};
+  var grid = gridModel.coordinateSystem;
+  var axis = axisModel.axis;
+  var layout = {};
+  var otherAxisOnZeroOf = axis.getAxesOnZeroOf()[0];
+  var rawAxisPosition = axis.position;
+  var axisPosition = otherAxisOnZeroOf ? 'onZero' : rawAxisPosition;
+  var axisDim = axis.dim;
+  var rect = grid.getRect();
+  var rectBound = [rect.x, rect.x + rect.width, rect.y, rect.y + rect.height];
+  var idx = {
+    left: 0,
+    right: 1,
+    top: 0,
+    bottom: 1,
+    onZero: 2
+  };
+  var axisOffset = axisModel.get('offset') || 0;
+  var posBound = axisDim === 'x' ? [rectBound[2] - axisOffset, rectBound[3] + axisOffset] : [rectBound[0] - axisOffset, rectBound[1] + axisOffset];
+
+  if (otherAxisOnZeroOf) {
+    var onZeroCoord = otherAxisOnZeroOf.toGlobalCoord(otherAxisOnZeroOf.dataToCoord(0));
+    posBound[idx.onZero] = Math.max(Math.min(onZeroCoord, posBound[1]), posBound[0]);
+  } // Axis position
+
+
+  layout.position = [axisDim === 'y' ? posBound[idx[axisPosition]] : rectBound[0], axisDim === 'x' ? posBound[idx[axisPosition]] : rectBound[3]]; // Axis rotation
+
+  layout.rotation = Math.PI / 2 * (axisDim === 'x' ? 0 : 1); // Tick and label direction, x y is axisDim
+
+  var dirMap = {
+    top: -1,
+    bottom: 1,
+    left: -1,
+    right: 1
+  };
+  layout.labelDirection = layout.tickDirection = layout.nameDirection = dirMap[rawAxisPosition];
+  layout.labelOffset = otherAxisOnZeroOf ? posBound[idx[rawAxisPosition]] - posBound[idx.onZero] : 0;
+
+  if (axisModel.get('axisTick.inside')) {
+    layout.tickDirection = -layout.tickDirection;
+  }
+
+  if (retrieve(opt.labelInside, axisModel.get('axisLabel.inside'))) {
+    layout.labelDirection = -layout.labelDirection;
+  } // Special label rotation
+
+
+  var labelRotate = axisModel.get('axisLabel.rotate');
+  layout.labelRotate = axisPosition === 'top' ? -labelRotate : labelRotate; // Over splitLine and splitArea
+
+  layout.z2 = 1;
+  return layout;
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+var axisBuilderAttrs = ['axisLine', 'axisTickLabel', 'axisName'];
+var selfBuilderAttrs = ['splitArea', 'splitLine']; // function getAlignWithLabel(model, axisModel) {
+//     var alignWithLabel = model.get('alignWithLabel');
+//     if (alignWithLabel === 'auto') {
+//         alignWithLabel = axisModel.get('axisTick.alignWithLabel');
+//     }
+//     return alignWithLabel;
+// }
+
+var CartesianAxisView = AxisView.extend({
+  type: 'cartesianAxis',
+  axisPointerClass: 'CartesianAxisPointer',
+
+  /**
+   * @override
+   */
+  render: function (axisModel, ecModel, api, payload) {
+    this.group.removeAll();
+    var oldAxisGroup = this._axisGroup;
+    this._axisGroup = new Group();
+    this.group.add(this._axisGroup);
+
+    if (!axisModel.get('show')) {
+      return;
+    }
+
+    var gridModel = axisModel.getCoordSysModel();
+    var layout = layout$1(gridModel, axisModel);
+    var axisBuilder = new AxisBuilder(axisModel, layout);
+    each$1(axisBuilderAttrs, axisBuilder.add, axisBuilder);
+
+    this._axisGroup.add(axisBuilder.getGroup());
+
+    each$1(selfBuilderAttrs, function (name) {
+      if (axisModel.get(name + '.show')) {
+        this['_' + name](axisModel, gridModel);
+      }
+    }, this);
+    groupTransition(oldAxisGroup, this._axisGroup, axisModel);
+    CartesianAxisView.superCall(this, 'render', axisModel, ecModel, api, payload);
+  },
+  remove: function () {
+    this._splitAreaColors = null;
+  },
+
+  /**
+   * @param {module:echarts/coord/cartesian/AxisModel} axisModel
+   * @param {module:echarts/coord/cartesian/GridModel} gridModel
+   * @private
+   */
+  _splitLine: function (axisModel, gridModel) {
+    var axis = axisModel.axis;
+
+    if (axis.scale.isBlank()) {
+      return;
+    }
+
+    var splitLineModel = axisModel.getModel('splitLine');
+    var lineStyleModel = splitLineModel.getModel('lineStyle');
+    var lineColors = lineStyleModel.get('color');
+    lineColors = isArray(lineColors) ? lineColors : [lineColors];
+    var gridRect = gridModel.coordinateSystem.getRect();
+    var isHorizontal = axis.isHorizontal();
+    var lineCount = 0;
+    var ticksCoords = axis.getTicksCoords({
+      tickModel: splitLineModel
+    });
+    var p1 = [];
+    var p2 = []; // Simple optimization
+    // Batching the lines if color are the same
+
+    var lineStyle = lineStyleModel.getLineStyle();
+
+    for (var i = 0; i < ticksCoords.length; i++) {
+      var tickCoord = axis.toGlobalCoord(ticksCoords[i].coord);
+
+      if (isHorizontal) {
+        p1[0] = tickCoord;
+        p1[1] = gridRect.y;
+        p2[0] = tickCoord;
+        p2[1] = gridRect.y + gridRect.height;
+      } else {
+        p1[0] = gridRect.x;
+        p1[1] = tickCoord;
+        p2[0] = gridRect.x + gridRect.width;
+        p2[1] = tickCoord;
+      }
+
+      var colorIndex = lineCount++ % lineColors.length;
+      var tickValue = ticksCoords[i].tickValue;
+
+      this._axisGroup.add(new Line(subPixelOptimizeLine({
+        anid: tickValue != null ? 'line_' + ticksCoords[i].tickValue : null,
+        shape: {
+          x1: p1[0],
+          y1: p1[1],
+          x2: p2[0],
+          y2: p2[1]
+        },
+        style: defaults({
+          stroke: lineColors[colorIndex]
+        }, lineStyle),
+        silent: true
+      })));
+    }
+  },
+
+  /**
+   * @param {module:echarts/coord/cartesian/AxisModel} axisModel
+   * @param {module:echarts/coord/cartesian/GridModel} gridModel
+   * @private
+   */
+  _splitArea: function (axisModel, gridModel) {
+    var axis = axisModel.axis;
+
+    if (axis.scale.isBlank()) {
+      return;
+    }
+
+    var splitAreaModel = axisModel.getModel('splitArea');
+    var areaStyleModel = splitAreaModel.getModel('areaStyle');
+    var areaColors = areaStyleModel.get('color');
+    var gridRect = gridModel.coordinateSystem.getRect();
+    var ticksCoords = axis.getTicksCoords({
+      tickModel: splitAreaModel,
+      clamp: true
+    });
+
+    if (!ticksCoords.length) {
+      return;
+    } // For Making appropriate splitArea animation, the color and anid
+    // should be corresponding to previous one if possible.
+
+
+    var areaColorsLen = areaColors.length;
+    var lastSplitAreaColors = this._splitAreaColors;
+    var newSplitAreaColors = createHashMap();
+    var colorIndex = 0;
+
+    if (lastSplitAreaColors) {
+      for (var i = 0; i < ticksCoords.length; i++) {
+        var cIndex = lastSplitAreaColors.get(ticksCoords[i].tickValue);
+
+        if (cIndex != null) {
+          colorIndex = (cIndex + (areaColorsLen - 1) * i) % areaColorsLen;
+          break;
+        }
+      }
+    }
+
+    var prev = axis.toGlobalCoord(ticksCoords[0].coord);
+    var areaStyle = areaStyleModel.getAreaStyle();
+    areaColors = isArray(areaColors) ? areaColors : [areaColors];
+
+    for (var i = 1; i < ticksCoords.length; i++) {
+      var tickCoord = axis.toGlobalCoord(ticksCoords[i].coord);
+      var x;
+      var y;
+      var width;
+      var height;
+
+      if (axis.isHorizontal()) {
+        x = prev;
+        y = gridRect.y;
+        width = tickCoord - x;
+        height = gridRect.height;
+        prev = x + width;
+      } else {
+        x = gridRect.x;
+        y = prev;
+        width = gridRect.width;
+        height = tickCoord - y;
+        prev = y + height;
+      }
+
+      var tickValue = ticksCoords[i - 1].tickValue;
+      tickValue != null && newSplitAreaColors.set(tickValue, colorIndex);
+
+      this._axisGroup.add(new Rect({
+        anid: tickValue != null ? 'area_' + tickValue : null,
+        shape: {
+          x: x,
+          y: y,
+          width: width,
+          height: height
+        },
+        style: defaults({
+          fill: areaColors[colorIndex]
+        }, areaStyle),
+        silent: true
+      }));
+
+      colorIndex = (colorIndex + 1) % areaColorsLen;
+    }
+
+    this._splitAreaColors = newSplitAreaColors;
+  }
+});
+CartesianAxisView.extend({
+  type: 'xAxis'
+});
+CartesianAxisView.extend({
+  type: 'yAxis'
+});
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+extendComponentView({
+  type: 'grid',
+  render: function (gridModel, ecModel) {
+    this.group.removeAll();
+
+    if (gridModel.get('show')) {
+      this.group.add(new Rect({
+        shape: gridModel.coordinateSystem.getRect(),
+        style: defaults({
+          fill: gridModel.get('backgroundColor')
+        }, gridModel.getItemStyle()),
+        silent: true,
+        z2: -1
+      }));
+    }
+  }
+});
+registerPreprocessor(function (option) {
+  // Only create grid when need
+  if (option.xAxis && option.yAxis && !option.grid) {
+    option.grid = {};
+  }
+});
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 registerVisual(visualSymbol('line', 'circle', 'line'));
 registerLayout(layoutPoints('line')); // Down sample after filter
 
@@ -40096,6 +39464,2657 @@ registerProcessor(dataFilter('pie'));
 * specific language governing permissions and limitations
 * under the License.
 */
+
+/**
+ * Link lists and struct (graph or tree)
+ */
+var each$7 = each$1;
+var DATAS = '\0__link_datas';
+var MAIN_DATA = '\0__link_mainData'; // Caution:
+// In most case, either list or its shallow clones (see list.cloneShallow)
+// is active in echarts process. So considering heap memory consumption,
+// we do not clone tree or graph, but share them among list and its shallow clones.
+// But in some rare case, we have to keep old list (like do animation in chart). So
+// please take care that both the old list and the new list share the same tree/graph.
+
+/**
+ * @param {Object} opt
+ * @param {module:echarts/data/List} opt.mainData
+ * @param {Object} [opt.struct] For example, instance of Graph or Tree.
+ * @param {string} [opt.structAttr] designation: list[structAttr] = struct;
+ * @param {Object} [opt.datas] {dataType: data},
+ *                 like: {node: nodeList, edge: edgeList}.
+ *                 Should contain mainData.
+ * @param {Object} [opt.datasAttr] {dataType: attr},
+ *                 designation: struct[datasAttr[dataType]] = list;
+ */
+
+function linkList(opt) {
+  var mainData = opt.mainData;
+  var datas = opt.datas;
+
+  if (!datas) {
+    datas = {
+      main: mainData
+    };
+    opt.datasAttr = {
+      main: 'data'
+    };
+  }
+
+  opt.datas = opt.mainData = null;
+  linkAll(mainData, datas, opt); // Porxy data original methods.
+
+  each$7(datas, function (data) {
+    each$7(mainData.TRANSFERABLE_METHODS, function (methodName) {
+      data.wrapMethod(methodName, curry(transferInjection, opt));
+    });
+  }); // Beyond transfer, additional features should be added to `cloneShallow`.
+
+  mainData.wrapMethod('cloneShallow', curry(cloneShallowInjection, opt)); // Only mainData trigger change, because struct.update may trigger
+  // another changable methods, which may bring about dead lock.
+
+  each$7(mainData.CHANGABLE_METHODS, function (methodName) {
+    mainData.wrapMethod(methodName, curry(changeInjection, opt));
+  }); // Make sure datas contains mainData.
+
+  assert$1(datas[mainData.dataType] === mainData);
+}
+
+function transferInjection(opt, res) {
+  if (isMainData(this)) {
+    // Transfer datas to new main data.
+    var datas = extend({}, this[DATAS]);
+    datas[this.dataType] = res;
+    linkAll(res, datas, opt);
+  } else {
+    // Modify the reference in main data to point newData.
+    linkSingle(res, this.dataType, this[MAIN_DATA], opt);
+  }
+
+  return res;
+}
+
+function changeInjection(opt, res) {
+  opt.struct && opt.struct.update(this);
+  return res;
+}
+
+function cloneShallowInjection(opt, res) {
+  // cloneShallow, which brings about some fragilities, may be inappropriate
+  // to be exposed as an API. So for implementation simplicity we can make
+  // the restriction that cloneShallow of not-mainData should not be invoked
+  // outside, but only be invoked here.
+  each$7(res[DATAS], function (data, dataType) {
+    data !== res && linkSingle(data.cloneShallow(), dataType, res, opt);
+  });
+  return res;
+}
+/**
+ * Supplement method to List.
+ *
+ * @public
+ * @param {string} [dataType] If not specified, return mainData.
+ * @return {module:echarts/data/List}
+ */
+
+
+function getLinkedData(dataType) {
+  var mainData = this[MAIN_DATA];
+  return dataType == null || mainData == null ? mainData : mainData[DATAS][dataType];
+}
+
+function isMainData(data) {
+  return data[MAIN_DATA] === data;
+}
+
+function linkAll(mainData, datas, opt) {
+  mainData[DATAS] = {};
+  each$7(datas, function (data, dataType) {
+    linkSingle(data, dataType, mainData, opt);
+  });
+}
+
+function linkSingle(data, dataType, mainData, opt) {
+  mainData[DATAS][dataType] = data;
+  data[MAIN_DATA] = mainData;
+  data.dataType = dataType;
+
+  if (opt.struct) {
+    data[opt.structAttr] = opt.struct;
+    opt.struct[opt.datasAttr[dataType]] = data;
+  } // Supplement method.
+
+
+  data.getLinkedData = getLinkedData;
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
+/**
+ * Tree data structure
+ *
+ * @module echarts/data/Tree
+ */
+/**
+ * @constructor module:echarts/data/Tree~TreeNode
+ * @param {string} name
+ * @param {module:echarts/data/Tree} hostTree
+ */
+
+var TreeNode = function (name, hostTree) {
+  /**
+   * @type {string}
+   */
+  this.name = name || '';
+  /**
+   * Depth of node
+   *
+   * @type {number}
+   * @readOnly
+   */
+
+  this.depth = 0;
+  /**
+   * Height of the subtree rooted at this node.
+   * @type {number}
+   * @readOnly
+   */
+
+  this.height = 0;
+  /**
+   * @type {module:echarts/data/Tree~TreeNode}
+   * @readOnly
+   */
+
+  this.parentNode = null;
+  /**
+   * Reference to list item.
+   * Do not persistent dataIndex outside,
+   * besause it may be changed by list.
+   * If dataIndex -1,
+   * this node is logical deleted (filtered) in list.
+   *
+   * @type {Object}
+   * @readOnly
+   */
+
+  this.dataIndex = -1;
+  /**
+   * @type {Array.<module:echarts/data/Tree~TreeNode>}
+   * @readOnly
+   */
+
+  this.children = [];
+  /**
+   * @type {Array.<module:echarts/data/Tree~TreeNode>}
+   * @pubilc
+   */
+
+  this.viewChildren = [];
+  /**
+   * @type {moduel:echarts/data/Tree}
+   * @readOnly
+   */
+
+  this.hostTree = hostTree;
+};
+
+TreeNode.prototype = {
+  constructor: TreeNode,
+
+  /**
+   * The node is removed.
+   * @return {boolean} is removed.
+   */
+  isRemoved: function () {
+    return this.dataIndex < 0;
+  },
+
+  /**
+   * Travel this subtree (include this node).
+   * Usage:
+   *    node.eachNode(function () { ... }); // preorder
+   *    node.eachNode('preorder', function () { ... }); // preorder
+   *    node.eachNode('postorder', function () { ... }); // postorder
+   *    node.eachNode(
+   *        {order: 'postorder', attr: 'viewChildren'},
+   *        function () { ... }
+   *    ); // postorder
+   *
+   * @param {(Object|string)} options If string, means order.
+   * @param {string=} options.order 'preorder' or 'postorder'
+   * @param {string=} options.attr 'children' or 'viewChildren'
+   * @param {Function} cb If in preorder and return false,
+   *                      its subtree will not be visited.
+   * @param {Object} [context]
+   */
+  eachNode: function (options, cb, context) {
+    if (typeof options === 'function') {
+      context = cb;
+      cb = options;
+      options = null;
+    }
+
+    options = options || {};
+
+    if (isString(options)) {
+      options = {
+        order: options
+      };
+    }
+
+    var order = options.order || 'preorder';
+    var children = this[options.attr || 'children'];
+    var suppressVisitSub;
+    order === 'preorder' && (suppressVisitSub = cb.call(context, this));
+
+    for (var i = 0; !suppressVisitSub && i < children.length; i++) {
+      children[i].eachNode(options, cb, context);
+    }
+
+    order === 'postorder' && cb.call(context, this);
+  },
+
+  /**
+   * Update depth and height of this subtree.
+   *
+   * @param  {number} depth
+   */
+  updateDepthAndHeight: function (depth) {
+    var height = 0;
+    this.depth = depth;
+
+    for (var i = 0; i < this.children.length; i++) {
+      var child = this.children[i];
+      child.updateDepthAndHeight(depth + 1);
+
+      if (child.height > height) {
+        height = child.height;
+      }
+    }
+
+    this.height = height + 1;
+  },
+
+  /**
+   * @param  {string} id
+   * @return {module:echarts/data/Tree~TreeNode}
+   */
+  getNodeById: function (id) {
+    if (this.getId() === id) {
+      return this;
+    }
+
+    for (var i = 0, children = this.children, len = children.length; i < len; i++) {
+      var res = children[i].getNodeById(id);
+
+      if (res) {
+        return res;
+      }
+    }
+  },
+
+  /**
+   * @param {module:echarts/data/Tree~TreeNode} node
+   * @return {boolean}
+   */
+  contains: function (node) {
+    if (node === this) {
+      return true;
+    }
+
+    for (var i = 0, children = this.children, len = children.length; i < len; i++) {
+      var res = children[i].contains(node);
+
+      if (res) {
+        return res;
+      }
+    }
+  },
+
+  /**
+   * @param {boolean} includeSelf Default false.
+   * @return {Array.<module:echarts/data/Tree~TreeNode>} order: [root, child, grandchild, ...]
+   */
+  getAncestors: function (includeSelf) {
+    var ancestors = [];
+    var node = includeSelf ? this : this.parentNode;
+
+    while (node) {
+      ancestors.push(node);
+      node = node.parentNode;
+    }
+
+    ancestors.reverse();
+    return ancestors;
+  },
+
+  /**
+   * @param {string|Array=} [dimension='value'] Default 'value'. can be 0, 1, 2, 3
+   * @return {number} Value.
+   */
+  getValue: function (dimension) {
+    var data = this.hostTree.data;
+    return data.get(data.getDimension(dimension || 'value'), this.dataIndex);
+  },
+
+  /**
+   * @param {Object} layout
+   * @param {boolean=} [merge=false]
+   */
+  setLayout: function (layout, merge$$1) {
+    this.dataIndex >= 0 && this.hostTree.data.setItemLayout(this.dataIndex, layout, merge$$1);
+  },
+
+  /**
+   * @return {Object} layout
+   */
+  getLayout: function () {
+    return this.hostTree.data.getItemLayout(this.dataIndex);
+  },
+
+  /**
+   * @param {string} [path]
+   * @return {module:echarts/model/Model}
+   */
+  getModel: function (path) {
+    if (this.dataIndex < 0) {
+      return;
+    }
+
+    var hostTree = this.hostTree;
+    var itemModel = hostTree.data.getItemModel(this.dataIndex);
+    var levelModel = this.getLevelModel();
+    var leavesModel;
+
+    if (!levelModel && (this.children.length === 0 || this.children.length !== 0 && this.isExpand === false)) {
+      leavesModel = this.getLeavesModel();
+    }
+
+    return itemModel.getModel(path, (levelModel || leavesModel || hostTree.hostModel).getModel(path));
+  },
+
+  /**
+   * @return {module:echarts/model/Model}
+   */
+  getLevelModel: function () {
+    return (this.hostTree.levelModels || [])[this.depth];
+  },
+
+  /**
+   * @return {module:echarts/model/Model}
+   */
+  getLeavesModel: function () {
+    return this.hostTree.leavesModel;
+  },
+
+  /**
+   * @example
+   *  setItemVisual('color', color);
+   *  setItemVisual({
+   *      'color': color
+   *  });
+   */
+  setVisual: function (key, value) {
+    this.dataIndex >= 0 && this.hostTree.data.setItemVisual(this.dataIndex, key, value);
+  },
+
+  /**
+   * Get item visual
+   */
+  getVisual: function (key, ignoreParent) {
+    return this.hostTree.data.getItemVisual(this.dataIndex, key, ignoreParent);
+  },
+
+  /**
+   * @public
+   * @return {number}
+   */
+  getRawIndex: function () {
+    return this.hostTree.data.getRawIndex(this.dataIndex);
+  },
+
+  /**
+   * @public
+   * @return {string}
+   */
+  getId: function () {
+    return this.hostTree.data.getId(this.dataIndex);
+  },
+
+  /**
+   * if this is an ancestor of another node
+   *
+   * @public
+   * @param {TreeNode} node another node
+   * @return {boolean} if is ancestor
+   */
+  isAncestorOf: function (node) {
+    var parent = node.parentNode;
+
+    while (parent) {
+      if (parent === this) {
+        return true;
+      }
+
+      parent = parent.parentNode;
+    }
+
+    return false;
+  },
+
+  /**
+   * if this is an descendant of another node
+   *
+   * @public
+   * @param {TreeNode} node another node
+   * @return {boolean} if is descendant
+   */
+  isDescendantOf: function (node) {
+    return node !== this && node.isAncestorOf(this);
+  }
+};
+/**
+ * @constructor
+ * @alias module:echarts/data/Tree
+ * @param {module:echarts/model/Model} hostModel
+ * @param {Array.<Object>} levelOptions
+ * @param {Object} leavesOption
+ */
+
+function Tree(hostModel, levelOptions, leavesOption) {
+  /**
+   * @type {module:echarts/data/Tree~TreeNode}
+   * @readOnly
+   */
+  this.root;
+  /**
+   * @type {module:echarts/data/List}
+   * @readOnly
+   */
+
+  this.data;
+  /**
+   * Index of each item is the same as the raw index of coresponding list item.
+   * @private
+   * @type {Array.<module:echarts/data/Tree~TreeNode}
+   */
+
+  this._nodes = [];
+  /**
+   * @private
+   * @readOnly
+   * @type {module:echarts/model/Model}
+   */
+
+  this.hostModel = hostModel;
+  /**
+   * @private
+   * @readOnly
+   * @type {Array.<module:echarts/model/Model}
+   */
+
+  this.levelModels = map(levelOptions || [], function (levelDefine) {
+    return new Model(levelDefine, hostModel, hostModel.ecModel);
+  });
+  this.leavesModel = new Model(leavesOption || {}, hostModel, hostModel.ecModel);
+}
+
+Tree.prototype = {
+  constructor: Tree,
+  type: 'tree',
+
+  /**
+   * Travel this subtree (include this node).
+   * Usage:
+   *    node.eachNode(function () { ... }); // preorder
+   *    node.eachNode('preorder', function () { ... }); // preorder
+   *    node.eachNode('postorder', function () { ... }); // postorder
+   *    node.eachNode(
+   *        {order: 'postorder', attr: 'viewChildren'},
+   *        function () { ... }
+   *    ); // postorder
+   *
+   * @param {(Object|string)} options If string, means order.
+   * @param {string=} options.order 'preorder' or 'postorder'
+   * @param {string=} options.attr 'children' or 'viewChildren'
+   * @param {Function} cb
+   * @param {Object}   [context]
+   */
+  eachNode: function (options, cb, context) {
+    this.root.eachNode(options, cb, context);
+  },
+
+  /**
+   * @param {number} dataIndex
+   * @return {module:echarts/data/Tree~TreeNode}
+   */
+  getNodeByDataIndex: function (dataIndex) {
+    var rawIndex = this.data.getRawIndex(dataIndex);
+    return this._nodes[rawIndex];
+  },
+
+  /**
+   * @param {string} name
+   * @return {module:echarts/data/Tree~TreeNode}
+   */
+  getNodeByName: function (name) {
+    return this.root.getNodeByName(name);
+  },
+
+  /**
+   * Update item available by list,
+   * when list has been performed options like 'filterSelf' or 'map'.
+   */
+  update: function () {
+    var data = this.data;
+    var nodes = this._nodes;
+
+    for (var i = 0, len = nodes.length; i < len; i++) {
+      nodes[i].dataIndex = -1;
+    }
+
+    for (var i = 0, len = data.count(); i < len; i++) {
+      nodes[data.getRawIndex(i)].dataIndex = i;
+    }
+  },
+
+  /**
+   * Clear all layouts
+   */
+  clearLayouts: function () {
+    this.data.clearItemLayouts();
+  }
+};
+/**
+ * data node format:
+ * {
+ *     name: ...
+ *     value: ...
+ *     children: [
+ *         {
+ *             name: ...
+ *             value: ...
+ *             children: ...
+ *         },
+ *         ...
+ *     ]
+ * }
+ *
+ * @static
+ * @param {Object} dataRoot Root node.
+ * @param {module:echarts/model/Model} hostModel
+ * @param {Object} treeOptions
+ * @param {Array.<Object>} treeOptions.levels
+ * @param {Array.<Object>} treeOptions.leaves
+ * @return module:echarts/data/Tree
+ */
+
+Tree.createTree = function (dataRoot, hostModel, treeOptions) {
+  var tree = new Tree(hostModel, treeOptions.levels, treeOptions.leaves);
+  var listData = [];
+  var dimMax = 1;
+  buildHierarchy(dataRoot);
+
+  function buildHierarchy(dataNode, parentNode) {
+    var value = dataNode.value;
+    dimMax = Math.max(dimMax, isArray(value) ? value.length : 1);
+    listData.push(dataNode);
+    var node = new TreeNode(dataNode.name, tree);
+    parentNode ? addChild(node, parentNode) : tree.root = node;
+
+    tree._nodes.push(node);
+
+    var children = dataNode.children;
+
+    if (children) {
+      for (var i = 0; i < children.length; i++) {
+        buildHierarchy(children[i], node);
+      }
+    }
+  }
+
+  tree.root.updateDepthAndHeight(0);
+  var dimensionsInfo = createDimensions(listData, {
+    coordDimensions: ['value'],
+    dimensionsCount: dimMax
+  });
+  var list = new List(dimensionsInfo, hostModel);
+  list.initData(listData);
+  linkList({
+    mainData: list,
+    struct: tree,
+    structAttr: 'tree'
+  });
+  tree.update();
+  return tree;
+};
+/**
+ * It is needed to consider the mess of 'list', 'hostModel' when creating a TreeNote,
+ * so this function is not ready and not necessary to be public.
+ *
+ * @param {(module:echarts/data/Tree~TreeNode|Object)} child
+ */
+
+
+function addChild(child, node) {
+  var children = node.children;
+
+  if (child.parentNode === node) {
+    return;
+  }
+
+  children.push(child);
+  child.parentNode = node;
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
+/**
+ * @file Create data struct and define tree view's series model
+ * @author Deqing Li(annong035@gmail.com)
+ */
+SeriesModel.extend({
+  type: 'series.tree',
+  layoutInfo: null,
+  // can support the position parameters 'left', 'top','right','bottom', 'width',
+  // 'height' in the setOption() with 'merge' mode normal.
+  layoutMode: 'box',
+
+  /**
+   * Init a tree data structure from data in option series
+   * @param  {Object} option  the object used to config echarts view
+   * @return {module:echarts/data/List} storage initial data
+   */
+  getInitialData: function (option) {
+    //create an virtual root
+    var root = {
+      name: option.name,
+      children: option.data
+    };
+    var leaves = option.leaves || {};
+    var treeOption = {};
+    treeOption.leaves = leaves;
+    var tree = Tree.createTree(root, this, treeOption);
+    var treeDepth = 0;
+    tree.eachNode('preorder', function (node) {
+      if (node.depth > treeDepth) {
+        treeDepth = node.depth;
+      }
+    });
+    var expandAndCollapse = option.expandAndCollapse;
+    var expandTreeDepth = expandAndCollapse && option.initialTreeDepth >= 0 ? option.initialTreeDepth : treeDepth;
+    tree.root.eachNode('preorder', function (node) {
+      var item = node.hostTree.data.getRawDataItem(node.dataIndex); // Add item.collapsed != null, because users can collapse node original in the series.data.
+
+      node.isExpand = item && item.collapsed != null ? !item.collapsed : node.depth <= expandTreeDepth;
+    });
+    return tree.data;
+  },
+
+  /**
+   * Make the configuration 'orient' backward compatibly, with 'horizontal = LR', 'vertical = TB'.
+   * @returns {string} orient
+   */
+  getOrient: function () {
+    var orient = this.get('orient');
+
+    if (orient === 'horizontal') {
+      orient = 'LR';
+    } else if (orient === 'vertical') {
+      orient = 'TB';
+    }
+
+    return orient;
+  },
+  setZoom: function (zoom) {
+    this.option.zoom = zoom;
+  },
+  setCenter: function (center) {
+    this.option.center = center;
+  },
+
+  /**
+   * @override
+   * @param {number} dataIndex
+   */
+  formatTooltip: function (dataIndex) {
+    var tree = this.getData().tree;
+    var realRoot = tree.root.children[0];
+    var node = tree.getNodeByDataIndex(dataIndex);
+    var value = node.getValue();
+    var name = node.name;
+
+    while (node && node !== realRoot) {
+      name = node.parentNode.name + '.' + name;
+      node = node.parentNode;
+    }
+
+    return encodeHTML(name + (isNaN(value) || value == null ? '' : ' : ' + value));
+  },
+  defaultOption: {
+    zlevel: 0,
+    z: 2,
+    coordinateSystem: 'view',
+    // the position of the whole view
+    left: '12%',
+    top: '12%',
+    right: '12%',
+    bottom: '12%',
+    // the layout of the tree, two value can be selected, 'orthogonal' or 'radial'
+    layout: 'orthogonal',
+    roam: false,
+    // true | false | 'move' | 'scale', see module:component/helper/RoamController.
+    // Symbol size scale ratio in roam
+    nodeScaleRatio: 0.4,
+    // Default on center of graph
+    center: null,
+    zoom: 1,
+    // The orient of orthoginal layout, can be setted to 'LR', 'TB', 'RL', 'BT'.
+    // and the backward compatibility configuration 'horizontal = LR', 'vertical = TB'.
+    orient: 'LR',
+    symbol: 'emptyCircle',
+    symbolSize: 7,
+    expandAndCollapse: true,
+    initialTreeDepth: 2,
+    lineStyle: {
+      color: '#ccc',
+      width: 1.5,
+      curveness: 0.5
+    },
+    itemStyle: {
+      color: 'lightsteelblue',
+      borderColor: '#c23531',
+      borderWidth: 1.5
+    },
+    label: {
+      show: true,
+      color: '#555'
+    },
+    leaves: {
+      label: {
+        show: true
+      }
+    },
+    animationEasing: 'linear',
+    animationDuration: 700,
+    animationDurationUpdate: 1000
+  }
+});
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
+/*
+* A third-party license is embeded for some of the code in this file:
+* The tree layoutHelper implementation was originally copied from
+* "d3.js"(https://github.com/d3/d3-hierarchy) with
+* some modifications made for this project.
+* (see more details in the comment of the specific method below.)
+* The use of the source code of this file is also subject to the terms
+* and consitions of the licence of "d3.js" (BSD-3Clause, see
+* </licenses/LICENSE-d3>).
+*/
+
+/**
+ * @file The layout algorithm of node-link tree diagrams. Here we using Reingold-Tilford algorithm to drawing
+ *       the tree.
+ */
+/**
+ * Initialize all computational message for following algorithm.
+ *
+ * @param  {module:echarts/data/Tree~TreeNode} root   The virtual root of the tree.
+ */
+
+function init$2(root) {
+  root.hierNode = {
+    defaultAncestor: null,
+    ancestor: root,
+    prelim: 0,
+    modifier: 0,
+    change: 0,
+    shift: 0,
+    i: 0,
+    thread: null
+  };
+  var nodes = [root];
+  var node;
+  var children;
+
+  while (node = nodes.pop()) {
+    // jshint ignore:line
+    children = node.children;
+
+    if (node.isExpand && children.length) {
+      var n = children.length;
+
+      for (var i = n - 1; i >= 0; i--) {
+        var child = children[i];
+        child.hierNode = {
+          defaultAncestor: null,
+          ancestor: child,
+          prelim: 0,
+          modifier: 0,
+          change: 0,
+          shift: 0,
+          i: i,
+          thread: null
+        };
+        nodes.push(child);
+      }
+    }
+  }
+}
+/**
+ * The implementation of this function was originally copied from "d3.js"
+ * <https://github.com/d3/d3-hierarchy/blob/4c1f038f2725d6eae2e49b61d01456400694bac4/src/tree.js>
+ * with some modifications made for this program.
+ * See the license statement at the head of this file.
+ *
+ * Computes a preliminary x coordinate for node. Before that, this function is
+ * applied recursively to the children of node, as well as the function
+ * apportion(). After spacing out the children by calling executeShifts(), the
+ * node is placed to the midpoint of its outermost children.
+ *
+ * @param  {module:echarts/data/Tree~TreeNode} node
+ * @param {Function} separation
+ */
+
+function firstWalk(node, separation) {
+  var children = node.isExpand ? node.children : [];
+  var siblings = node.parentNode.children;
+  var subtreeW = node.hierNode.i ? siblings[node.hierNode.i - 1] : null;
+
+  if (children.length) {
+    executeShifts(node);
+    var midPoint = (children[0].hierNode.prelim + children[children.length - 1].hierNode.prelim) / 2;
+
+    if (subtreeW) {
+      node.hierNode.prelim = subtreeW.hierNode.prelim + separation(node, subtreeW);
+      node.hierNode.modifier = node.hierNode.prelim - midPoint;
+    } else {
+      node.hierNode.prelim = midPoint;
+    }
+  } else if (subtreeW) {
+    node.hierNode.prelim = subtreeW.hierNode.prelim + separation(node, subtreeW);
+  }
+
+  node.parentNode.hierNode.defaultAncestor = apportion(node, subtreeW, node.parentNode.hierNode.defaultAncestor || siblings[0], separation);
+}
+/**
+ * The implementation of this function was originally copied from "d3.js"
+ * <https://github.com/d3/d3-hierarchy/blob/4c1f038f2725d6eae2e49b61d01456400694bac4/src/tree.js>
+ * with some modifications made for this program.
+ * See the license statement at the head of this file.
+ *
+ * Computes all real x-coordinates by summing up the modifiers recursively.
+ *
+ * @param  {module:echarts/data/Tree~TreeNode} node
+ */
+
+function secondWalk(node) {
+  var nodeX = node.hierNode.prelim + node.parentNode.hierNode.modifier;
+  node.setLayout({
+    x: nodeX
+  }, true);
+  node.hierNode.modifier += node.parentNode.hierNode.modifier;
+}
+function separation(cb) {
+  return arguments.length ? cb : defaultSeparation;
+}
+/**
+ * Transform the common coordinate to radial coordinate.
+ *
+ * @param  {number} x
+ * @param  {number} y
+ * @return {Object}
+ */
+
+function radialCoordinate(x, y) {
+  var radialCoor = {};
+  x -= Math.PI / 2;
+  radialCoor.x = y * Math.cos(x);
+  radialCoor.y = y * Math.sin(x);
+  return radialCoor;
+}
+/**
+ * Get the layout position of the whole view.
+ *
+ * @param {module:echarts/model/Series} seriesModel  the model object of sankey series
+ * @param {module:echarts/ExtensionAPI} api  provide the API list that the developer can call
+ * @return {module:zrender/core/BoundingRect}  size of rect to draw the sankey view
+ */
+
+function getViewRect(seriesModel, api) {
+  return getLayoutRect(seriesModel.getBoxLayoutParams(), {
+    width: api.getWidth(),
+    height: api.getHeight()
+  });
+}
+/**
+ * All other shifts, applied to the smaller subtrees between w- and w+, are
+ * performed by this function.
+ *
+ * The implementation of this function was originally copied from "d3.js"
+ * <https://github.com/d3/d3-hierarchy/blob/4c1f038f2725d6eae2e49b61d01456400694bac4/src/tree.js>
+ * with some modifications made for this program.
+ * See the license statement at the head of this file.
+ *
+ * @param  {module:echarts/data/Tree~TreeNode} node
+ */
+
+function executeShifts(node) {
+  var children = node.children;
+  var n = children.length;
+  var shift = 0;
+  var change = 0;
+
+  while (--n >= 0) {
+    var child = children[n];
+    child.hierNode.prelim += shift;
+    child.hierNode.modifier += shift;
+    change += child.hierNode.change;
+    shift += child.hierNode.shift + change;
+  }
+}
+/**
+ * The implementation of this function was originally copied from "d3.js"
+ * <https://github.com/d3/d3-hierarchy/blob/4c1f038f2725d6eae2e49b61d01456400694bac4/src/tree.js>
+ * with some modifications made for this program.
+ * See the license statement at the head of this file.
+ *
+ * The core of the algorithm. Here, a new subtree is combined with the
+ * previous subtrees. Threads are used to traverse the inside and outside
+ * contours of the left and right subtree up to the highest common level.
+ * Whenever two nodes of the inside contours conflict, we compute the left
+ * one of the greatest uncommon ancestors using the function nextAncestor()
+ * and call moveSubtree() to shift the subtree and prepare the shifts of
+ * smaller subtrees. Finally, we add a new thread (if necessary).
+ *
+ * @param  {module:echarts/data/Tree~TreeNode} subtreeV
+ * @param  {module:echarts/data/Tree~TreeNode} subtreeW
+ * @param  {module:echarts/data/Tree~TreeNode} ancestor
+ * @param  {Function} separation
+ * @return {module:echarts/data/Tree~TreeNode}
+ */
+
+
+function apportion(subtreeV, subtreeW, ancestor, separation) {
+  if (subtreeW) {
+    var nodeOutRight = subtreeV;
+    var nodeInRight = subtreeV;
+    var nodeOutLeft = nodeInRight.parentNode.children[0];
+    var nodeInLeft = subtreeW;
+    var sumOutRight = nodeOutRight.hierNode.modifier;
+    var sumInRight = nodeInRight.hierNode.modifier;
+    var sumOutLeft = nodeOutLeft.hierNode.modifier;
+    var sumInLeft = nodeInLeft.hierNode.modifier;
+
+    while (nodeInLeft = nextRight(nodeInLeft), nodeInRight = nextLeft(nodeInRight), nodeInLeft && nodeInRight) {
+      nodeOutRight = nextRight(nodeOutRight);
+      nodeOutLeft = nextLeft(nodeOutLeft);
+      nodeOutRight.hierNode.ancestor = subtreeV;
+      var shift = nodeInLeft.hierNode.prelim + sumInLeft - nodeInRight.hierNode.prelim - sumInRight + separation(nodeInLeft, nodeInRight);
+
+      if (shift > 0) {
+        moveSubtree(nextAncestor(nodeInLeft, subtreeV, ancestor), subtreeV, shift);
+        sumInRight += shift;
+        sumOutRight += shift;
+      }
+
+      sumInLeft += nodeInLeft.hierNode.modifier;
+      sumInRight += nodeInRight.hierNode.modifier;
+      sumOutRight += nodeOutRight.hierNode.modifier;
+      sumOutLeft += nodeOutLeft.hierNode.modifier;
+    }
+
+    if (nodeInLeft && !nextRight(nodeOutRight)) {
+      nodeOutRight.hierNode.thread = nodeInLeft;
+      nodeOutRight.hierNode.modifier += sumInLeft - sumOutRight;
+    }
+
+    if (nodeInRight && !nextLeft(nodeOutLeft)) {
+      nodeOutLeft.hierNode.thread = nodeInRight;
+      nodeOutLeft.hierNode.modifier += sumInRight - sumOutLeft;
+      ancestor = subtreeV;
+    }
+  }
+
+  return ancestor;
+}
+/**
+ * This function is used to traverse the right contour of a subtree.
+ * It returns the rightmost child of node or the thread of node. The function
+ * returns null if and only if node is on the highest depth of its subtree.
+ *
+ * @param  {module:echarts/data/Tree~TreeNode} node
+ * @return {module:echarts/data/Tree~TreeNode}
+ */
+
+
+function nextRight(node) {
+  var children = node.children;
+  return children.length && node.isExpand ? children[children.length - 1] : node.hierNode.thread;
+}
+/**
+ * This function is used to traverse the left contour of a subtree (or a subforest).
+ * It returns the leftmost child of node or the thread of node. The function
+ * returns null if and only if node is on the highest depth of its subtree.
+ *
+ * @param  {module:echarts/data/Tree~TreeNode} node
+ * @return {module:echarts/data/Tree~TreeNode}
+ */
+
+
+function nextLeft(node) {
+  var children = node.children;
+  return children.length && node.isExpand ? children[0] : node.hierNode.thread;
+}
+/**
+ * If nodeInLeft’s ancestor is a sibling of node, returns nodeInLeft’s ancestor.
+ * Otherwise, returns the specified ancestor.
+ *
+ * @param  {module:echarts/data/Tree~TreeNode} nodeInLeft
+ * @param  {module:echarts/data/Tree~TreeNode} node
+ * @param  {module:echarts/data/Tree~TreeNode} ancestor
+ * @return {module:echarts/data/Tree~TreeNode}
+ */
+
+
+function nextAncestor(nodeInLeft, node, ancestor) {
+  return nodeInLeft.hierNode.ancestor.parentNode === node.parentNode ? nodeInLeft.hierNode.ancestor : ancestor;
+}
+/**
+ * The implementation of this function was originally copied from "d3.js"
+ * <https://github.com/d3/d3-hierarchy/blob/4c1f038f2725d6eae2e49b61d01456400694bac4/src/tree.js>
+ * with some modifications made for this program.
+ * See the license statement at the head of this file.
+ *
+ * Shifts the current subtree rooted at wr.
+ * This is done by increasing prelim(w+) and modifier(w+) by shift.
+ *
+ * @param  {module:echarts/data/Tree~TreeNode} wl
+ * @param  {module:echarts/data/Tree~TreeNode} wr
+ * @param  {number} shift [description]
+ */
+
+
+function moveSubtree(wl, wr, shift) {
+  var change = shift / (wr.hierNode.i - wl.hierNode.i);
+  wr.hierNode.change -= change;
+  wr.hierNode.shift += shift;
+  wr.hierNode.modifier += shift;
+  wr.hierNode.prelim += shift;
+  wl.hierNode.change += change;
+}
+/**
+ * The implementation of this function was originally copied from "d3.js"
+ * <https://github.com/d3/d3-hierarchy/blob/4c1f038f2725d6eae2e49b61d01456400694bac4/src/tree.js>
+ * with some modifications made for this program.
+ * See the license statement at the head of this file.
+ */
+
+
+function defaultSeparation(node1, node2) {
+  return node1.parentNode === node2.parentNode ? 1 : 2;
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
+/**
+ * Simple view coordinate system
+ * Mapping given x, y to transformd view x, y
+ */
+var v2ApplyTransform$1 = applyTransform; // Dummy transform node
+
+function TransformDummy() {
+  Transformable.call(this);
+}
+
+mixin(TransformDummy, Transformable);
+
+function View(name) {
+  /**
+   * @type {string}
+   */
+  this.name = name;
+  /**
+   * @type {Object}
+   */
+
+  this.zoomLimit;
+  Transformable.call(this);
+  this._roamTransformable = new TransformDummy();
+  this._rawTransformable = new TransformDummy();
+  this._center;
+  this._zoom;
+}
+
+View.prototype = {
+  constructor: View,
+  type: 'view',
+
+  /**
+   * @param {Array.<string>}
+   * @readOnly
+   */
+  dimensions: ['x', 'y'],
+
+  /**
+   * Set bounding rect
+   * @param {number} x
+   * @param {number} y
+   * @param {number} width
+   * @param {number} height
+   */
+  // PENDING to getRect
+  setBoundingRect: function (x, y, width, height) {
+    this._rect = new BoundingRect(x, y, width, height);
+    return this._rect;
+  },
+
+  /**
+   * @return {module:zrender/core/BoundingRect}
+   */
+  // PENDING to getRect
+  getBoundingRect: function () {
+    return this._rect;
+  },
+
+  /**
+   * @param {number} x
+   * @param {number} y
+   * @param {number} width
+   * @param {number} height
+   */
+  setViewRect: function (x, y, width, height) {
+    this.transformTo(x, y, width, height);
+    this._viewRect = new BoundingRect(x, y, width, height);
+  },
+
+  /**
+   * Transformed to particular position and size
+   * @param {number} x
+   * @param {number} y
+   * @param {number} width
+   * @param {number} height
+   */
+  transformTo: function (x, y, width, height) {
+    var rect = this.getBoundingRect();
+    var rawTransform = this._rawTransformable;
+    rawTransform.transform = rect.calculateTransform(new BoundingRect(x, y, width, height));
+    rawTransform.decomposeTransform();
+
+    this._updateTransform();
+  },
+
+  /**
+   * Set center of view
+   * @param {Array.<number>} [centerCoord]
+   */
+  setCenter: function (centerCoord) {
+    if (!centerCoord) {
+      return;
+    }
+
+    this._center = centerCoord;
+
+    this._updateCenterAndZoom();
+  },
+
+  /**
+   * @param {number} zoom
+   */
+  setZoom: function (zoom) {
+    zoom = zoom || 1;
+    var zoomLimit = this.zoomLimit;
+
+    if (zoomLimit) {
+      if (zoomLimit.max != null) {
+        zoom = Math.min(zoomLimit.max, zoom);
+      }
+
+      if (zoomLimit.min != null) {
+        zoom = Math.max(zoomLimit.min, zoom);
+      }
+    }
+
+    this._zoom = zoom;
+
+    this._updateCenterAndZoom();
+  },
+
+  /**
+   * Get default center without roam
+   */
+  getDefaultCenter: function () {
+    // Rect before any transform
+    var rawRect = this.getBoundingRect();
+    var cx = rawRect.x + rawRect.width / 2;
+    var cy = rawRect.y + rawRect.height / 2;
+    return [cx, cy];
+  },
+  getCenter: function () {
+    return this._center || this.getDefaultCenter();
+  },
+  getZoom: function () {
+    return this._zoom || 1;
+  },
+
+  /**
+   * @return {Array.<number}
+   */
+  getRoamTransform: function () {
+    return this._roamTransformable.getLocalTransform();
+  },
+
+  /**
+   * Remove roam
+   */
+  _updateCenterAndZoom: function () {
+    // Must update after view transform updated
+    var rawTransformMatrix = this._rawTransformable.getLocalTransform();
+
+    var roamTransform = this._roamTransformable;
+    var defaultCenter = this.getDefaultCenter();
+    var center = this.getCenter();
+    var zoom = this.getZoom();
+    center = applyTransform([], center, rawTransformMatrix);
+    defaultCenter = applyTransform([], defaultCenter, rawTransformMatrix);
+    roamTransform.origin = center;
+    roamTransform.position = [defaultCenter[0] - center[0], defaultCenter[1] - center[1]];
+    roamTransform.scale = [zoom, zoom];
+
+    this._updateTransform();
+  },
+
+  /**
+   * Update transform from roam and mapLocation
+   * @private
+   */
+  _updateTransform: function () {
+    var roamTransformable = this._roamTransformable;
+    var rawTransformable = this._rawTransformable;
+    rawTransformable.parent = roamTransformable;
+    roamTransformable.updateTransform();
+    rawTransformable.updateTransform();
+    copy$1(this.transform || (this.transform = []), rawTransformable.transform || create$1());
+    this._rawTransform = rawTransformable.getLocalTransform();
+    this.invTransform = this.invTransform || [];
+    invert(this.invTransform, this.transform);
+    this.decomposeTransform();
+  },
+
+  /**
+   * @return {module:zrender/core/BoundingRect}
+   */
+  getViewRect: function () {
+    return this._viewRect;
+  },
+
+  /**
+   * Get view rect after roam transform
+   * @return {module:zrender/core/BoundingRect}
+   */
+  getViewRectAfterRoam: function () {
+    var rect = this.getBoundingRect().clone();
+    rect.applyTransform(this.transform);
+    return rect;
+  },
+
+  /**
+   * Convert a single (lon, lat) data item to (x, y) point.
+   * @param {Array.<number>} data
+   * @param {boolean} noRoam
+   * @param {Array.<number>} [out]
+   * @return {Array.<number>}
+   */
+  dataToPoint: function (data, noRoam, out) {
+    var transform = noRoam ? this._rawTransform : this.transform;
+    out = out || [];
+    return transform ? v2ApplyTransform$1(out, data, transform) : copy(out, data);
+  },
+
+  /**
+   * Convert a (x, y) point to (lon, lat) data
+   * @param {Array.<number>} point
+   * @return {Array.<number>}
+   */
+  pointToData: function (point) {
+    var invTransform = this.invTransform;
+    return invTransform ? v2ApplyTransform$1([], point, invTransform) : [point[0], point[1]];
+  },
+
+  /**
+   * @implements
+   * see {module:echarts/CoodinateSystem}
+   */
+  convertToPixel: curry(doConvert, 'dataToPoint'),
+
+  /**
+   * @implements
+   * see {module:echarts/CoodinateSystem}
+   */
+  convertFromPixel: curry(doConvert, 'pointToData'),
+
+  /**
+   * @implements
+   * see {module:echarts/CoodinateSystem}
+   */
+  containPoint: function (point) {
+    return this.getViewRectAfterRoam().contain(point[0], point[1]);
+  }
+  /**
+   * @return {number}
+   */
+  // getScalarScale: function () {
+  //     // Use determinant square root of transform to mutiply scalar
+  //     var m = this.transform;
+  //     var det = Math.sqrt(Math.abs(m[0] * m[3] - m[2] * m[1]));
+  //     return det;
+  // }
+
+};
+mixin(View, Transformable);
+
+function doConvert(methodName, ecModel, finder, value) {
+  var seriesModel = finder.seriesModel;
+  var coordSys = seriesModel ? seriesModel.coordinateSystem : null; // e.g., graph.
+
+  return coordSys === this ? coordSys[methodName](value) : null;
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
+/**
+ * For geo and graph.
+ *
+ * @param {Object} controllerHost
+ * @param {module:zrender/Element} controllerHost.target
+ */
+function updateViewOnPan(controllerHost, dx, dy) {
+  var target = controllerHost.target;
+  var pos = target.position;
+  pos[0] += dx;
+  pos[1] += dy;
+  target.dirty();
+}
+/**
+ * For geo and graph.
+ *
+ * @param {Object} controllerHost
+ * @param {module:zrender/Element} controllerHost.target
+ * @param {number} controllerHost.zoom
+ * @param {number} controllerHost.zoomLimit like: {min: 1, max: 2}
+ */
+
+function updateViewOnZoom(controllerHost, zoomDelta, zoomX, zoomY) {
+  var target = controllerHost.target;
+  var zoomLimit = controllerHost.zoomLimit;
+  var pos = target.position;
+  var scale = target.scale;
+  var newZoom = controllerHost.zoom = controllerHost.zoom || 1;
+  newZoom *= zoomDelta;
+
+  if (zoomLimit) {
+    var zoomMin = zoomLimit.min || 0;
+    var zoomMax = zoomLimit.max || Infinity;
+    newZoom = Math.max(Math.min(zoomMax, newZoom), zoomMin);
+  }
+
+  var zoomScale = newZoom / controllerHost.zoom;
+  controllerHost.zoom = newZoom; // Keep the mouse center when scaling
+
+  pos[0] -= (zoomX - pos[0]) * (zoomScale - 1);
+  pos[1] -= (zoomY - pos[1]) * (zoomScale - 1);
+  scale[0] *= zoomScale;
+  scale[1] *= zoomScale;
+  target.dirty();
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+var ATTR = '\0_ec_interaction_mutex';
+
+
+function isTaken(zr, resourceKey) {
+  return !!getStore(zr)[resourceKey];
+}
+
+function getStore(zr) {
+  return zr[ATTR] || (zr[ATTR] = {});
+}
+/**
+ * payload: {
+ *     type: 'takeGlobalCursor',
+ *     key: 'dataZoomSelect', or 'brush', or ...,
+ *         If no userKey, release global cursor.
+ * }
+ */
+
+
+registerAction({
+  type: 'takeGlobalCursor',
+  event: 'globalCursorTaken',
+  update: 'update'
+}, function () {});
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+/**
+ * @alias module:echarts/component/helper/RoamController
+ * @constructor
+ * @mixin {module:zrender/mixin/Eventful}
+ *
+ * @param {module:zrender/zrender~ZRender} zr
+ */
+
+function RoamController(zr) {
+  /**
+   * @type {Function}
+   */
+  this.pointerChecker;
+  /**
+   * @type {module:zrender}
+   */
+
+  this._zr = zr;
+  /**
+   * @type {Object}
+   */
+
+  this._opt = {}; // Avoid two roamController bind the same handler
+
+  var bind$$1 = bind;
+  var mousedownHandler = bind$$1(mousedown, this);
+  var mousemoveHandler = bind$$1(mousemove, this);
+  var mouseupHandler = bind$$1(mouseup, this);
+  var mousewheelHandler = bind$$1(mousewheel, this);
+  var pinchHandler = bind$$1(pinch, this);
+  Eventful.call(this);
+  /**
+   * @param {Function} pointerChecker
+   *                   input: x, y
+   *                   output: boolean
+   */
+
+  this.setPointerChecker = function (pointerChecker) {
+    this.pointerChecker = pointerChecker;
+  };
+  /**
+   * Notice: only enable needed types. For example, if 'zoom'
+   * is not needed, 'zoom' should not be enabled, otherwise
+   * default mousewheel behaviour (scroll page) will be disabled.
+   *
+   * @param  {boolean|string} [controlType=true] Specify the control type,
+   *                          which can be null/undefined or true/false
+   *                          or 'pan/move' or 'zoom'/'scale'
+   * @param {Object} [opt]
+   * @param {Object} [opt.zoomOnMouseWheel=true] The value can be: true / false / 'shift' / 'ctrl' / 'alt'.
+   * @param {Object} [opt.moveOnMouseMove=true] The value can be: true / false / 'shift' / 'ctrl' / 'alt'.
+   * @param {Object} [opt.moveOnMouseWheel=false] The value can be: true / false / 'shift' / 'ctrl' / 'alt'.
+   * @param {Object} [opt.preventDefaultMouseMove=true] When pan.
+   */
+
+
+  this.enable = function (controlType, opt) {
+    // Disable previous first
+    this.disable();
+    this._opt = defaults(clone(opt) || {}, {
+      zoomOnMouseWheel: true,
+      moveOnMouseMove: true,
+      // By default, wheel do not trigger move.
+      moveOnMouseWheel: false,
+      preventDefaultMouseMove: true
+    });
+
+    if (controlType == null) {
+      controlType = true;
+    }
+
+    if (controlType === true || controlType === 'move' || controlType === 'pan') {
+      zr.on('mousedown', mousedownHandler);
+      zr.on('mousemove', mousemoveHandler);
+      zr.on('mouseup', mouseupHandler);
+    }
+
+    if (controlType === true || controlType === 'scale' || controlType === 'zoom') {
+      zr.on('mousewheel', mousewheelHandler);
+      zr.on('pinch', pinchHandler);
+    }
+  };
+
+  this.disable = function () {
+    zr.off('mousedown', mousedownHandler);
+    zr.off('mousemove', mousemoveHandler);
+    zr.off('mouseup', mouseupHandler);
+    zr.off('mousewheel', mousewheelHandler);
+    zr.off('pinch', pinchHandler);
+  };
+
+  this.dispose = this.disable;
+
+  this.isDragging = function () {
+    return this._dragging;
+  };
+
+  this.isPinching = function () {
+    return this._pinching;
+  };
+}
+
+mixin(RoamController, Eventful);
+
+function mousedown(e) {
+  if (isMiddleOrRightButtonOnMouseUpDown(e) || e.target && e.target.draggable) {
+    return;
+  }
+
+  var x = e.offsetX;
+  var y = e.offsetY; // Only check on mosedown, but not mousemove.
+  // Mouse can be out of target when mouse moving.
+
+  if (this.pointerChecker && this.pointerChecker(e, x, y)) {
+    this._x = x;
+    this._y = y;
+    this._dragging = true;
+  }
+}
+
+function mousemove(e) {
+  if (!this._dragging || !isAvailableBehavior('moveOnMouseMove', e, this._opt) || e.gestureEvent === 'pinch' || isTaken(this._zr, 'globalPan')) {
+    return;
+  }
+
+  var x = e.offsetX;
+  var y = e.offsetY;
+  var oldX = this._x;
+  var oldY = this._y;
+  var dx = x - oldX;
+  var dy = y - oldY;
+  this._x = x;
+  this._y = y;
+  this._opt.preventDefaultMouseMove && stop(e.event);
+  trigger(this, 'pan', 'moveOnMouseMove', e, {
+    dx: dx,
+    dy: dy,
+    oldX: oldX,
+    oldY: oldY,
+    newX: x,
+    newY: y
+  });
+}
+
+function mouseup(e) {
+  if (!isMiddleOrRightButtonOnMouseUpDown(e)) {
+    this._dragging = false;
+  }
+}
+
+function mousewheel(e) {
+  var shouldZoom = isAvailableBehavior('zoomOnMouseWheel', e, this._opt);
+  var shouldMove = isAvailableBehavior('moveOnMouseWheel', e, this._opt);
+  var wheelDelta = e.wheelDelta;
+  var absWheelDeltaDelta = Math.abs(wheelDelta);
+  var originX = e.offsetX;
+  var originY = e.offsetY; // wheelDelta maybe -0 in chrome mac.
+
+  if (wheelDelta === 0 || !shouldZoom && !shouldMove) {
+    return;
+  } // If both `shouldZoom` and `shouldMove` is true, trigger
+  // their event both, and the final behavior is determined
+  // by event listener themselves.
+
+
+  if (shouldZoom) {
+    // Convenience:
+    // Mac and VM Windows on Mac: scroll up: zoom out.
+    // Windows: scroll up: zoom in.
+    // FIXME: Should do more test in different environment.
+    // wheelDelta is too complicated in difference nvironment
+    // (https://developer.mozilla.org/en-US/docs/Web/Events/mousewheel),
+    // although it has been normallized by zrender.
+    // wheelDelta of mouse wheel is bigger than touch pad.
+    var factor = absWheelDeltaDelta > 3 ? 1.4 : absWheelDeltaDelta > 1 ? 1.2 : 1.1;
+    var scale = wheelDelta > 0 ? factor : 1 / factor;
+    checkPointerAndTrigger(this, 'zoom', 'zoomOnMouseWheel', e, {
+      scale: scale,
+      originX: originX,
+      originY: originY
+    });
+  }
+
+  if (shouldMove) {
+    // FIXME: Should do more test in different environment.
+    var absDelta = Math.abs(wheelDelta); // wheelDelta of mouse wheel is bigger than touch pad.
+
+    var scrollDelta = (wheelDelta > 0 ? 1 : -1) * (absDelta > 3 ? 0.4 : absDelta > 1 ? 0.15 : 0.05);
+    checkPointerAndTrigger(this, 'scrollMove', 'moveOnMouseWheel', e, {
+      scrollDelta: scrollDelta,
+      originX: originX,
+      originY: originY
+    });
+  }
+}
+
+function pinch(e) {
+  if (isTaken(this._zr, 'globalPan')) {
+    return;
+  }
+
+  var scale = e.pinchScale > 1 ? 1.1 : 1 / 1.1;
+  checkPointerAndTrigger(this, 'zoom', null, e, {
+    scale: scale,
+    originX: e.pinchX,
+    originY: e.pinchY
+  });
+}
+
+function checkPointerAndTrigger(controller, eventName, behaviorToCheck, e, contollerEvent) {
+  if (controller.pointerChecker && controller.pointerChecker(e, contollerEvent.originX, contollerEvent.originY)) {
+    // When mouse is out of roamController rect,
+    // default befavoius should not be be disabled, otherwise
+    // page sliding is disabled, contrary to expectation.
+    stop(e.event);
+    trigger(controller, eventName, behaviorToCheck, e, contollerEvent);
+  }
+}
+
+function trigger(controller, eventName, behaviorToCheck, e, contollerEvent) {
+  // Also provide behavior checker for event listener, for some case that
+  // multiple components share one listener.
+  contollerEvent.isAvailableBehavior = bind(isAvailableBehavior, null, behaviorToCheck, e);
+  controller.trigger(eventName, contollerEvent);
+} // settings: {
+//     zoomOnMouseWheel
+//     moveOnMouseMove
+//     moveOnMouseWheel
+// }
+// The value can be: true / false / 'shift' / 'ctrl' / 'alt'.
+
+
+function isAvailableBehavior(behaviorToCheck, e, settings) {
+  var setting = settings[behaviorToCheck];
+  return !behaviorToCheck || setting && (!isString(setting) || e.event[setting + 'Key']);
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+var IRRELEVANT_EXCLUDES = {
+  'axisPointer': 1,
+  'tooltip': 1,
+  'brush': 1
+};
+/**
+ * Avoid that: mouse click on a elements that is over geo or graph,
+ * but roam is triggered.
+ */
+
+function onIrrelevantElement(e, api, targetCoordSysModel) {
+  var model = api.getComponentByElement(e.topTarget); // If model is axisModel, it works only if it is injected with coordinateSystem.
+
+  var coordSys = model && model.coordinateSystem;
+  return model && model !== targetCoordSysModel && !IRRELEVANT_EXCLUDES[model.mainType] && coordSys && coordSys.model !== targetCoordSysModel;
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
+/**
+ * @file This file used to draw tree view.
+ * @author Deqing Li(annong035@gmail.com)
+ */
+extendChartView({
+  type: 'tree',
+
+  /**
+   * Init the chart
+   * @override
+   * @param  {module:echarts/model/Global} ecModel
+   * @param  {module:echarts/ExtensionAPI} api
+   */
+  init: function (ecModel, api) {
+    /**
+     * @private
+     * @type {module:echarts/data/Tree}
+     */
+    this._oldTree;
+    /**
+     * @private
+     * @type {module:zrender/container/Group}
+     */
+
+    this._mainGroup = new Group();
+    /**
+     * @private
+     * @type {module:echarts/componet/helper/RoamController}
+     */
+
+    this._controller = new RoamController(api.getZr());
+    this._controllerHost = {
+      target: this.group
+    };
+    this.group.add(this._mainGroup);
+  },
+  render: function (seriesModel, ecModel, api, payload) {
+    var data = seriesModel.getData();
+    var layoutInfo = seriesModel.layoutInfo;
+    var group = this._mainGroup;
+    var layout = seriesModel.get('layout');
+
+    if (layout === 'radial') {
+      group.attr('position', [layoutInfo.x + layoutInfo.width / 2, layoutInfo.y + layoutInfo.height / 2]);
+    } else {
+      group.attr('position', [layoutInfo.x, layoutInfo.y]);
+    }
+
+    this._updateViewCoordSys(seriesModel);
+
+    this._updateController(seriesModel, ecModel, api);
+
+    var oldData = this._data;
+    var seriesScope = {
+      expandAndCollapse: seriesModel.get('expandAndCollapse'),
+      layout: layout,
+      orient: seriesModel.getOrient(),
+      curvature: seriesModel.get('lineStyle.curveness'),
+      symbolRotate: seriesModel.get('symbolRotate'),
+      symbolOffset: seriesModel.get('symbolOffset'),
+      hoverAnimation: seriesModel.get('hoverAnimation'),
+      useNameLabel: true,
+      fadeIn: true
+    };
+    data.diff(oldData).add(function (newIdx) {
+      if (symbolNeedsDraw$1(data, newIdx)) {
+        // Create node and edge
+        updateNode(data, newIdx, null, group, seriesModel, seriesScope);
+      }
+    }).update(function (newIdx, oldIdx) {
+      var symbolEl = oldData.getItemGraphicEl(oldIdx);
+
+      if (!symbolNeedsDraw$1(data, newIdx)) {
+        symbolEl && removeNode(oldData, oldIdx, symbolEl, group, seriesModel, seriesScope);
+        return;
+      } // Update node and edge
+
+
+      updateNode(data, newIdx, symbolEl, group, seriesModel, seriesScope);
+    }).remove(function (oldIdx) {
+      var symbolEl = oldData.getItemGraphicEl(oldIdx); // When remove a collapsed node of subtree, since the collapsed
+      // node haven't been initialized with a symbol element,
+      // you can't found it's symbol element through index.
+      // so if we want to remove the symbol element we should insure
+      // that the symbol element is not null.
+
+      if (symbolEl) {
+        removeNode(oldData, oldIdx, symbolEl, group, seriesModel, seriesScope);
+      }
+    }).execute();
+    this._nodeScaleRatio = seriesModel.get('nodeScaleRatio');
+
+    this._updateNodeAndLinkScale(seriesModel);
+
+    if (seriesScope.expandAndCollapse === true) {
+      data.eachItemGraphicEl(function (el, dataIndex) {
+        el.off('click').on('click', function () {
+          api.dispatchAction({
+            type: 'treeExpandAndCollapse',
+            seriesId: seriesModel.id,
+            dataIndex: dataIndex
+          });
+        });
+      });
+    }
+
+    this._data = data;
+  },
+  _updateViewCoordSys: function (seriesModel) {
+    var data = seriesModel.getData();
+    var points = [];
+    data.each(function (idx) {
+      var layout = data.getItemLayout(idx);
+
+      if (layout && !isNaN(layout.x) && !isNaN(layout.y)) {
+        points.push([+layout.x, +layout.y]);
+      }
+    });
+    var min = [];
+    var max = [];
+    fromPoints(points, min, max); // If width or height is 0
+
+    if (max[0] - min[0] === 0) {
+      max[0] += 1;
+      min[0] -= 1;
+    }
+
+    if (max[1] - min[1] === 0) {
+      max[1] += 1;
+      min[1] -= 1;
+    }
+
+    var viewCoordSys = seriesModel.coordinateSystem = new View();
+    viewCoordSys.zoomLimit = seriesModel.get('scaleLimit');
+    viewCoordSys.setBoundingRect(min[0], min[1], max[0] - min[0], max[1] - min[1]);
+    viewCoordSys.setCenter(seriesModel.get('center'));
+    viewCoordSys.setZoom(seriesModel.get('zoom')); // Here we use viewCoordSys just for computing the 'position' and 'scale' of the group
+
+    this.group.attr({
+      position: viewCoordSys.position,
+      scale: viewCoordSys.scale
+    });
+    this._viewCoordSys = viewCoordSys;
+  },
+  _updateController: function (seriesModel, ecModel, api) {
+    var controller = this._controller;
+    var controllerHost = this._controllerHost;
+    var group = this.group;
+    controller.setPointerChecker(function (e, x, y) {
+      var rect = group.getBoundingRect();
+      rect.applyTransform(group.transform);
+      return rect.contain(x, y) && !onIrrelevantElement(e, api, seriesModel);
+    });
+    controller.enable(seriesModel.get('roam'));
+    controllerHost.zoomLimit = seriesModel.get('scaleLimit');
+    controllerHost.zoom = seriesModel.coordinateSystem.getZoom();
+    controller.off('pan').off('zoom').on('pan', function (e) {
+      updateViewOnPan(controllerHost, e.dx, e.dy);
+      api.dispatchAction({
+        seriesId: seriesModel.id,
+        type: 'treeRoam',
+        dx: e.dx,
+        dy: e.dy
+      });
+    }, this).on('zoom', function (e) {
+      updateViewOnZoom(controllerHost, e.scale, e.originX, e.originY);
+      api.dispatchAction({
+        seriesId: seriesModel.id,
+        type: 'treeRoam',
+        zoom: e.scale,
+        originX: e.originX,
+        originY: e.originY
+      });
+
+      this._updateNodeAndLinkScale(seriesModel);
+    }, this);
+  },
+  _updateNodeAndLinkScale: function (seriesModel) {
+    var data = seriesModel.getData();
+
+    var nodeScale = this._getNodeGlobalScale(seriesModel);
+
+    var invScale = [nodeScale, nodeScale];
+    data.eachItemGraphicEl(function (el, idx) {
+      el.attr('scale', invScale);
+    });
+  },
+  _getNodeGlobalScale: function (seriesModel) {
+    var coordSys = seriesModel.coordinateSystem;
+
+    if (coordSys.type !== 'view') {
+      return 1;
+    }
+
+    var nodeScaleRatio = this._nodeScaleRatio;
+    var groupScale = coordSys.scale;
+    var groupZoom = groupScale && groupScale[0] || 1; // Scale node when zoom changes
+
+    var roamZoom = coordSys.getZoom();
+    var nodeScale = (roamZoom - 1) * nodeScaleRatio + 1;
+    return nodeScale / groupZoom;
+  },
+  dispose: function () {
+    this._controller && this._controller.dispose();
+    this._controllerHost = {};
+  },
+  remove: function () {
+    this._mainGroup.removeAll();
+
+    this._data = null;
+  }
+});
+
+function symbolNeedsDraw$1(data, dataIndex) {
+  var layout = data.getItemLayout(dataIndex);
+  return layout && !isNaN(layout.x) && !isNaN(layout.y) && data.getItemVisual(dataIndex, 'symbol') !== 'none';
+}
+
+function getTreeNodeStyle(node, itemModel, seriesScope) {
+  seriesScope.itemModel = itemModel;
+  seriesScope.itemStyle = itemModel.getModel('itemStyle').getItemStyle();
+  seriesScope.hoverItemStyle = itemModel.getModel('emphasis.itemStyle').getItemStyle();
+  seriesScope.lineStyle = itemModel.getModel('lineStyle').getLineStyle();
+  seriesScope.labelModel = itemModel.getModel('label');
+  seriesScope.hoverLabelModel = itemModel.getModel('emphasis.label');
+
+  if (node.isExpand === false && node.children.length !== 0) {
+    seriesScope.symbolInnerColor = seriesScope.itemStyle.fill;
+  } else {
+    seriesScope.symbolInnerColor = '#fff';
+  }
+
+  return seriesScope;
+}
+
+function updateNode(data, dataIndex, symbolEl, group, seriesModel, seriesScope) {
+  var isInit = !symbolEl;
+  var node = data.tree.getNodeByDataIndex(dataIndex);
+  var itemModel = node.getModel();
+  var seriesScope = getTreeNodeStyle(node, itemModel, seriesScope);
+  var virtualRoot = data.tree.root;
+  var source = node.parentNode === virtualRoot ? node : node.parentNode || node;
+  var sourceSymbolEl = data.getItemGraphicEl(source.dataIndex);
+  var sourceLayout = source.getLayout();
+  var sourceOldLayout = sourceSymbolEl ? {
+    x: sourceSymbolEl.position[0],
+    y: sourceSymbolEl.position[1],
+    rawX: sourceSymbolEl.__radialOldRawX,
+    rawY: sourceSymbolEl.__radialOldRawY
+  } : sourceLayout;
+  var targetLayout = node.getLayout();
+
+  if (isInit) {
+    symbolEl = new SymbolClz$1(data, dataIndex, seriesScope);
+    symbolEl.attr('position', [sourceOldLayout.x, sourceOldLayout.y]);
+  } else {
+    symbolEl.updateData(data, dataIndex, seriesScope);
+  }
+
+  symbolEl.__radialOldRawX = symbolEl.__radialRawX;
+  symbolEl.__radialOldRawY = symbolEl.__radialRawY;
+  symbolEl.__radialRawX = targetLayout.rawX;
+  symbolEl.__radialRawY = targetLayout.rawY;
+  group.add(symbolEl);
+  data.setItemGraphicEl(dataIndex, symbolEl);
+  updateProps(symbolEl, {
+    position: [targetLayout.x, targetLayout.y]
+  }, seriesModel);
+  var symbolPath = symbolEl.getSymbolPath();
+
+  if (seriesScope.layout === 'radial') {
+    var realRoot = virtualRoot.children[0];
+    var rootLayout = realRoot.getLayout();
+    var length = realRoot.children.length;
+    var rad;
+    var isLeft;
+
+    if (targetLayout.x === rootLayout.x && node.isExpand === true) {
+      var center = {};
+      center.x = (realRoot.children[0].getLayout().x + realRoot.children[length - 1].getLayout().x) / 2;
+      center.y = (realRoot.children[0].getLayout().y + realRoot.children[length - 1].getLayout().y) / 2;
+      rad = Math.atan2(center.y - rootLayout.y, center.x - rootLayout.x);
+
+      if (rad < 0) {
+        rad = Math.PI * 2 + rad;
+      }
+
+      isLeft = center.x < rootLayout.x;
+
+      if (isLeft) {
+        rad = rad - Math.PI;
+      }
+    } else {
+      rad = Math.atan2(targetLayout.y - rootLayout.y, targetLayout.x - rootLayout.x);
+
+      if (rad < 0) {
+        rad = Math.PI * 2 + rad;
+      }
+
+      if (node.children.length === 0 || node.children.length !== 0 && node.isExpand === false) {
+        isLeft = targetLayout.x < rootLayout.x;
+
+        if (isLeft) {
+          rad = rad - Math.PI;
+        }
+      } else {
+        isLeft = targetLayout.x > rootLayout.x;
+
+        if (!isLeft) {
+          rad = rad - Math.PI;
+        }
+      }
+    }
+
+    var textPosition = isLeft ? 'left' : 'right';
+    symbolPath.setStyle({
+      textPosition: textPosition,
+      textRotation: -rad,
+      textOrigin: 'center',
+      verticalAlign: 'middle'
+    });
+  }
+
+  if (node.parentNode && node.parentNode !== virtualRoot) {
+    var edge = symbolEl.__edge;
+
+    if (!edge) {
+      edge = symbolEl.__edge = new BezierCurve({
+        shape: getEdgeShape(seriesScope, sourceOldLayout, sourceOldLayout),
+        style: defaults({
+          opacity: 0,
+          strokeNoScale: true
+        }, seriesScope.lineStyle)
+      });
+    }
+
+    updateProps(edge, {
+      shape: getEdgeShape(seriesScope, sourceLayout, targetLayout),
+      style: {
+        opacity: 1
+      }
+    }, seriesModel);
+    group.add(edge);
+  }
+}
+
+function removeNode(data, dataIndex, symbolEl, group, seriesModel, seriesScope) {
+  var node = data.tree.getNodeByDataIndex(dataIndex);
+  var virtualRoot = data.tree.root;
+  var itemModel = node.getModel();
+  var seriesScope = getTreeNodeStyle(node, itemModel, seriesScope);
+  var source = node.parentNode === virtualRoot ? node : node.parentNode || node;
+  var sourceLayout;
+
+  while (sourceLayout = source.getLayout(), sourceLayout == null) {
+    source = source.parentNode === virtualRoot ? source : source.parentNode || source;
+  }
+
+  updateProps(symbolEl, {
+    position: [sourceLayout.x + 1, sourceLayout.y + 1]
+  }, seriesModel, function () {
+    group.remove(symbolEl);
+    data.setItemGraphicEl(dataIndex, null);
+  });
+  symbolEl.fadeOut(null, {
+    keepLabel: true
+  });
+  var edge = symbolEl.__edge;
+
+  if (edge) {
+    updateProps(edge, {
+      shape: getEdgeShape(seriesScope, sourceLayout, sourceLayout),
+      style: {
+        opacity: 0
+      }
+    }, seriesModel, function () {
+      group.remove(edge);
+    });
+  }
+}
+
+function getEdgeShape(seriesScope, sourceLayout, targetLayout) {
+  var cpx1;
+  var cpy1;
+  var cpx2;
+  var cpy2;
+  var orient = seriesScope.orient;
+  var x1;
+  var x2;
+  var y1;
+  var y2;
+
+  if (seriesScope.layout === 'radial') {
+    x1 = sourceLayout.rawX;
+    y1 = sourceLayout.rawY;
+    x2 = targetLayout.rawX;
+    y2 = targetLayout.rawY;
+    var radialCoor1 = radialCoordinate(x1, y1);
+    var radialCoor2 = radialCoordinate(x1, y1 + (y2 - y1) * seriesScope.curvature);
+    var radialCoor3 = radialCoordinate(x2, y2 + (y1 - y2) * seriesScope.curvature);
+    var radialCoor4 = radialCoordinate(x2, y2);
+    return {
+      x1: radialCoor1.x,
+      y1: radialCoor1.y,
+      x2: radialCoor4.x,
+      y2: radialCoor4.y,
+      cpx1: radialCoor2.x,
+      cpy1: radialCoor2.y,
+      cpx2: radialCoor3.x,
+      cpy2: radialCoor3.y
+    };
+  } else {
+    x1 = sourceLayout.x;
+    y1 = sourceLayout.y;
+    x2 = targetLayout.x;
+    y2 = targetLayout.y;
+
+    if (orient === 'LR' || orient === 'RL') {
+      cpx1 = x1 + (x2 - x1) * seriesScope.curvature;
+      cpy1 = y1;
+      cpx2 = x2 + (x1 - x2) * seriesScope.curvature;
+      cpy2 = y2;
+    }
+
+    if (orient === 'TB' || orient === 'BT') {
+      cpx1 = x1;
+      cpy1 = y1 + (y2 - y1) * seriesScope.curvature;
+      cpx2 = x2;
+      cpy2 = y2 + (y1 - y2) * seriesScope.curvature;
+    }
+  }
+
+  return {
+    x1: x1,
+    y1: y1,
+    x2: x2,
+    y2: y2,
+    cpx1: cpx1,
+    cpy1: cpy1,
+    cpx2: cpx2,
+    cpy2: cpy2
+  };
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
+/**
+ * @param {module:echarts/coord/View} view
+ * @param {Object} payload
+ * @param {Object} [zoomLimit]
+ */
+function updateCenterAndZoom(view, payload, zoomLimit) {
+  var previousZoom = view.getZoom();
+  var center = view.getCenter();
+  var zoom = payload.zoom;
+  var point = view.dataToPoint(center);
+
+  if (payload.dx != null && payload.dy != null) {
+    point[0] -= payload.dx;
+    point[1] -= payload.dy;
+    var center = view.pointToData(point);
+    view.setCenter(center);
+  }
+
+  if (zoom != null) {
+    if (zoomLimit) {
+      var zoomMin = zoomLimit.min || 0;
+      var zoomMax = zoomLimit.max || Infinity;
+      zoom = Math.max(Math.min(previousZoom * zoom, zoomMax), zoomMin) / previousZoom;
+    } // Zoom on given point(originX, originY)
+
+
+    view.scale[0] *= zoom;
+    view.scale[1] *= zoom;
+    var position = view.position;
+    var fixX = (payload.originX - position[0]) * (zoom - 1);
+    var fixY = (payload.originY - position[1]) * (zoom - 1);
+    position[0] -= fixX;
+    position[1] -= fixY;
+    view.updateTransform(); // Get the new center
+
+    var center = view.pointToData(point);
+    view.setCenter(center);
+    view.setZoom(zoom * previousZoom);
+  }
+
+  return {
+    center: view.getCenter(),
+    zoom: view.getZoom()
+  };
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
+/**
+ * @file Register the actions of the tree
+ * @author Deqing Li(annong035@gmail.com)
+ */
+registerAction({
+  type: 'treeExpandAndCollapse',
+  event: 'treeExpandAndCollapse',
+  update: 'update'
+}, function (payload, ecModel) {
+  ecModel.eachComponent({
+    mainType: 'series',
+    subType: 'tree',
+    query: payload
+  }, function (seriesModel) {
+    var dataIndex = payload.dataIndex;
+    var tree = seriesModel.getData().tree;
+    var node = tree.getNodeByDataIndex(dataIndex);
+    node.isExpand = !node.isExpand;
+  });
+});
+registerAction({
+  type: 'treeRoam',
+  event: 'treeRoam',
+  // Here we set 'none' instead of 'update', because roam action
+  // just need to update the transform matrix without having to recalculate
+  // the layout. So don't need to go through the whole update process, such
+  // as 'dataPrcocess', 'coordSystemUpdate', 'layout' and so on.
+  update: 'none'
+}, function (payload, ecModel) {
+  ecModel.eachComponent({
+    mainType: 'series',
+    subType: 'tree',
+    query: payload
+  }, function (seriesModel) {
+    var coordSys = seriesModel.coordinateSystem;
+    var res = updateCenterAndZoom(coordSys, payload);
+    seriesModel.setCenter && seriesModel.setCenter(res.center);
+    seriesModel.setZoom && seriesModel.setZoom(res.zoom);
+  });
+});
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+
+/**
+ * Traverse the tree from bottom to top and do something
+ * @param  {module:echarts/data/Tree~TreeNode} root  The real root of the tree
+ * @param  {Function} callback
+ */
+function eachAfter(root, callback, separation) {
+  var nodes = [root];
+  var next = [];
+  var node;
+
+  while (node = nodes.pop()) {
+    // jshint ignore:line
+    next.push(node);
+
+    if (node.isExpand) {
+      var children = node.children;
+
+      if (children.length) {
+        for (var i = 0; i < children.length; i++) {
+          nodes.push(children[i]);
+        }
+      }
+    }
+  }
+
+  while (node = next.pop()) {
+    // jshint ignore:line
+    callback(node, separation);
+  }
+}
+/**
+ * Traverse the tree from top to bottom and do something
+ * @param  {module:echarts/data/Tree~TreeNode} root  The real root of the tree
+ * @param  {Function} callback
+ */
+
+
+function eachBefore(root, callback) {
+  var nodes = [root];
+  var node;
+
+  while (node = nodes.pop()) {
+    // jshint ignore:line
+    callback(node);
+
+    if (node.isExpand) {
+      var children = node.children;
+
+      if (children.length) {
+        for (var i = children.length - 1; i >= 0; i--) {
+          nodes.push(children[i]);
+        }
+      }
+    }
+  }
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+var treeLayout = function (ecModel, api) {
+  ecModel.eachSeriesByType('tree', function (seriesModel) {
+    commonLayout(seriesModel, api);
+  });
+};
+
+function commonLayout(seriesModel, api) {
+  var layoutInfo = getViewRect(seriesModel, api);
+  seriesModel.layoutInfo = layoutInfo;
+  var layout = seriesModel.get('layout');
+  var width = 0;
+  var height = 0;
+  var separation$$1 = null;
+
+  if (layout === 'radial') {
+    width = 2 * Math.PI;
+    height = Math.min(layoutInfo.height, layoutInfo.width) / 2;
+    separation$$1 = separation(function (node1, node2) {
+      return (node1.parentNode === node2.parentNode ? 1 : 2) / node1.depth;
+    });
+  } else {
+    width = layoutInfo.width;
+    height = layoutInfo.height;
+    separation$$1 = separation();
+  }
+
+  var virtualRoot = seriesModel.getData().tree.root;
+  var realRoot = virtualRoot.children[0];
+
+  if (realRoot) {
+    init$2(virtualRoot);
+    eachAfter(realRoot, firstWalk, separation$$1);
+    virtualRoot.hierNode.modifier = -realRoot.hierNode.prelim;
+    eachBefore(realRoot, secondWalk);
+    var left = realRoot;
+    var right = realRoot;
+    var bottom = realRoot;
+    eachBefore(realRoot, function (node) {
+      var x = node.getLayout().x;
+
+      if (x < left.getLayout().x) {
+        left = node;
+      }
+
+      if (x > right.getLayout().x) {
+        right = node;
+      }
+
+      if (node.depth > bottom.depth) {
+        bottom = node;
+      }
+    });
+    var delta = left === right ? 1 : separation$$1(left, right) / 2;
+    var tx = delta - left.getLayout().x;
+    var kx = 0;
+    var ky = 0;
+    var coorX = 0;
+    var coorY = 0;
+
+    if (layout === 'radial') {
+      kx = width / (right.getLayout().x + delta + tx); // here we use (node.depth - 1), bucause the real root's depth is 1
+
+      ky = height / (bottom.depth - 1 || 1);
+      eachBefore(realRoot, function (node) {
+        coorX = (node.getLayout().x + tx) * kx;
+        coorY = (node.depth - 1) * ky;
+        var finalCoor = radialCoordinate(coorX, coorY);
+        node.setLayout({
+          x: finalCoor.x,
+          y: finalCoor.y,
+          rawX: coorX,
+          rawY: coorY
+        }, true);
+      });
+    } else {
+      var orient = seriesModel.getOrient();
+
+      if (orient === 'RL' || orient === 'LR') {
+        ky = height / (right.getLayout().x + delta + tx);
+        kx = width / (bottom.depth - 1 || 1);
+        eachBefore(realRoot, function (node) {
+          coorY = (node.getLayout().x + tx) * ky;
+          coorX = orient === 'LR' ? (node.depth - 1) * kx : width - (node.depth - 1) * kx;
+          node.setLayout({
+            x: coorX,
+            y: coorY
+          }, true);
+        });
+      } else if (orient === 'TB' || orient === 'BT') {
+        kx = width / (right.getLayout().x + delta + tx);
+        ky = height / (bottom.depth - 1 || 1);
+        eachBefore(realRoot, function (node) {
+          coorX = (node.getLayout().x + tx) * kx;
+          coorY = orient === 'TB' ? (node.depth - 1) * ky : height - (node.depth - 1) * ky;
+          node.setLayout({
+            x: coorX,
+            y: coorY
+          }, true);
+        });
+      }
+    }
+  }
+}
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
+registerVisual(visualSymbol('tree', 'circle'));
+registerLayout(treeLayout);
+
+/*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*/
 extendComponentModel({
   type: 'title',
   layoutMode: {
@@ -40664,7 +42683,7 @@ function makeBackground(rect, componentModel) {
 * under the License.
 */
 var curry$2 = curry;
-var each$7 = each$1;
+var each$8 = each$1;
 var Group$2 = Group;
 var LegendView = extendComponentView({
   type: 'legend.plain',
@@ -40759,7 +42778,7 @@ var LegendView = extendComponentView({
     ecModel.eachRawSeries(function (seriesModel) {
       !seriesModel.get('legendHoverLink') && excludeSeriesId.push(seriesModel.id);
     });
-    each$7(legendModel.getData(), function (itemModel, dataIndex) {
+    each$8(legendModel.getData(), function (itemModel, dataIndex) {
       var name = itemModel.get('name'); // Use empty string or \n as a newline string
 
       if (!this.newlineDisabled && (name === '' || name === '\n')) {
@@ -41633,7 +43652,7 @@ var findPointFromSeries = function (finder, ecModel) {
 * specific language governing permissions and limitations
 * under the License.
 */
-var each$8 = each$1;
+var each$9 = each$1;
 var curry$3 = curry;
 var inner$7 = makeInner();
 /**
@@ -41706,10 +43725,10 @@ var axisTrigger = function (payload, ecModel, api) {
     showTooltip: curry$3(showTooltip, dataByCoordSys)
   }; // Process for triggered axes.
 
-  each$8(coordSysAxesInfo.coordSysMap, function (coordSys, coordSysKey) {
+  each$9(coordSysAxesInfo.coordSysMap, function (coordSys, coordSysKey) {
     // If a point given, it must be contained by the coordinate system.
     var coordSysContainsPoint = isIllegalPoint || coordSys.containPoint(point);
-    each$8(coordSysAxesInfo.coordSysAxesInfo[coordSysKey], function (axisInfo, key) {
+    each$9(coordSysAxesInfo.coordSysAxesInfo[coordSysKey], function (axisInfo, key) {
       var axis = axisInfo.axis;
       var inputAxisInfo = findInputAxisInfo(inputAxesInfo, axisInfo); // If no inputAxesInfo, no axis is restricted.
 
@@ -41726,11 +43745,11 @@ var axisTrigger = function (payload, ecModel, api) {
   }); // Process for linked axes.
 
   var linkTriggers = {};
-  each$8(axesInfo, function (tarAxisInfo, tarKey) {
+  each$9(axesInfo, function (tarAxisInfo, tarKey) {
     var linkGroup = tarAxisInfo.linkGroup; // If axis has been triggered in the previous stage, it should not be triggered by link.
 
     if (linkGroup && !showValueMap[tarKey]) {
-      each$8(linkGroup.axesInfo, function (srcAxisInfo, srcKey) {
+      each$9(linkGroup.axesInfo, function (srcAxisInfo, srcKey) {
         var srcValItem = showValueMap[srcKey]; // If srcValItem exist, source axis is triggered, so link to target axis.
 
         if (srcAxisInfo !== tarAxisInfo && srcValItem) {
@@ -41741,7 +43760,7 @@ var axisTrigger = function (payload, ecModel, api) {
       });
     }
   });
-  each$8(linkTriggers, function (val, tarKey) {
+  each$9(linkTriggers, function (val, tarKey) {
     processOnAxis(axesInfo[tarKey], val, updaters, true, outputFinder);
   });
   updateModelActually(showValueMap, axesInfo, outputFinder);
@@ -41793,7 +43812,7 @@ function buildPayloadsBySeries(value, axisInfo) {
   var payloadBatch = [];
   var minDist = Number.MAX_VALUE;
   var minDiff = -1;
-  each$8(axisInfo.seriesModels, function (series, idx) {
+  each$9(axisInfo.seriesModels, function (series, idx) {
     var dataDim = series.getData().mapDimension(dim, true);
     var seriesNestestValue;
     var dataIndices;
@@ -41830,7 +43849,7 @@ function buildPayloadsBySeries(value, axisInfo) {
         payloadBatch.length = 0;
       }
 
-      each$8(dataIndices, function (dataIndex) {
+      each$9(dataIndices, function (dataIndex) {
         payloadBatch.push({
           seriesIndex: series.seriesIndex,
           dataIndexInside: dataIndex,
@@ -41899,7 +43918,7 @@ function showTooltip(dataByCoordSys, axisInfo, payloadInfo, value) {
 function updateModelActually(showValueMap, axesInfo, outputFinder) {
   var outputAxesInfo = outputFinder.axesInfo = []; // Basic logic: If no 'show' required, 'hide' this axisPointer.
 
-  each$8(axesInfo, function (axisInfo, key) {
+  each$9(axesInfo, function (axisInfo, key) {
     var option = axisInfo.axisPointerModel.option;
     var valItem = showValueMap[key];
 
@@ -41963,9 +43982,9 @@ function dispatchHighDownActually(axesInfo, dispatchAction, api) {
   var newHighlights = inner$7(zr)[highDownKey] = {}; // Update highlight/downplay status according to axisPointer model.
   // Build hash map and remove duplicate incidentally.
 
-  each$8(axesInfo, function (axisInfo, key) {
+  each$9(axesInfo, function (axisInfo, key) {
     var option = axisInfo.axisPointerModel.option;
-    option.status === 'show' && each$8(option.seriesDataIndices, function (batchItem) {
+    option.status === 'show' && each$9(option.seriesDataIndices, function (batchItem) {
       var key = batchItem.seriesIndex + ' | ' + batchItem.dataIndex;
       newHighlights[key] = batchItem;
     });
@@ -42140,7 +44159,7 @@ var AxisPointerModel = extendComponentModel({
 * under the License.
 */
 var inner$8 = makeInner();
-var each$9 = each$1;
+var each$10 = each$1;
 /**
  * @param {string} key
  * @param {module:echarts/ExtensionAPI} api
@@ -42175,7 +44194,7 @@ function initGlobalListeners(zr, api) {
   function useHandler(eventType, cb) {
     zr.on(eventType, function (e) {
       var dis = makeDispatchAction(api);
-      each$9(inner$8(zr).records, function (record) {
+      each$10(inner$8(zr).records, function (record) {
         record && cb(record, e, dis.dispatchAction);
       });
       dispatchTooltipFinally(dis.pendings, api);
@@ -43282,7 +45301,7 @@ extendComponentModel({
 * specific language governing permissions and limitations
 * under the License.
 */
-var each$11 = each$1;
+var each$12 = each$1;
 var toCamelCase$1 = toCamelCase;
 var vendors = ['', '-webkit-', '-moz-', '-o-'];
 var gCssText = 'position:absolute;display:block;border-style:solid;white-space:nowrap;z-index:9999999;';
@@ -43313,7 +45332,7 @@ function assembleFont(textStyleModel) {
   color && cssText.push('color:' + color);
   cssText.push('font:' + textStyleModel.getFont());
   fontSize && cssText.push('line-height:' + Math.round(fontSize * 3 / 2) + 'px');
-  each$11(['decoration', 'align'], function (name) {
+  each$12(['decoration', 'align'], function (name) {
     var val = textStyleModel.get(name);
     val && cssText.push('text-' + name + ':' + val);
   });
@@ -43346,7 +45365,7 @@ function assembleCssText(tooltipModel) {
   } // Border style
 
 
-  each$11(['width', 'color', 'radius'], function (name) {
+  each$12(['width', 'color', 'radius'], function (name) {
     var borderName = 'border-' + name;
     var camelCase = toCamelCase$1(borderName);
     var val = tooltipModel.get(camelCase);
@@ -43718,7 +45737,7 @@ TooltipRichContent.prototype = {
 * under the License.
 */
 var bind$2 = bind;
-var each$10 = each$1;
+var each$11 = each$1;
 var parsePercent$2 = parsePercent$1;
 var proxyRect = new Rect({
   shape: {
@@ -44013,7 +46032,7 @@ extendComponentView({
     var renderMode = this._renderMode;
     var newLine = this._newLine;
     var markers = {};
-    each$10(dataByCoordSys, function (itemCoordSys) {
+    each$11(dataByCoordSys, function (itemCoordSys) {
       // var coordParamList = [];
       // var coordDefaultHTML = [];
       // var coordTooltipModel = buildTooltipModel([
@@ -44024,7 +46043,7 @@ extendComponentView({
       // ]);
       // var displayMode = coordTooltipModel.get('displayMode');
       // var paramsList = displayMode === 'single' ? singleParamsList : [];
-      each$10(itemCoordSys.dataByAxis, function (item) {
+      each$11(itemCoordSys.dataByAxis, function (item) {
         var axisModel = ecModel.getComponent(item.axisDim + 'Axis', item.axisIndex);
         var axisValue = item.value;
         var seriesDefaultHTML = [];
@@ -44271,17 +46290,17 @@ extendComponentView({
   _updateContentNotChangedOnAxis: function (dataByCoordSys) {
     var lastCoordSys = this._lastDataByCoordSys;
     var contentNotChanged = !!lastCoordSys && lastCoordSys.length === dataByCoordSys.length;
-    contentNotChanged && each$10(lastCoordSys, function (lastItemCoordSys, indexCoordSys) {
+    contentNotChanged && each$11(lastCoordSys, function (lastItemCoordSys, indexCoordSys) {
       var lastDataByAxis = lastItemCoordSys.dataByAxis || {};
       var thisItemCoordSys = dataByCoordSys[indexCoordSys] || {};
       var thisDataByAxis = thisItemCoordSys.dataByAxis || [];
       contentNotChanged &= lastDataByAxis.length === thisDataByAxis.length;
-      contentNotChanged && each$10(lastDataByAxis, function (lastItem, indexAxis) {
+      contentNotChanged && each$11(lastDataByAxis, function (lastItem, indexAxis) {
         var thisItem = thisDataByAxis[indexAxis] || {};
         var lastIndices = lastItem.seriesDataIndices || [];
         var newIndices = thisItem.seriesDataIndices || [];
         contentNotChanged &= lastItem.value === thisItem.value && lastItem.axisType === thisItem.axisType && lastItem.axisId === thisItem.axisId && lastIndices.length === newIndices.length;
-        contentNotChanged && each$10(lastIndices, function (lastIdxItem, j) {
+        contentNotChanged && each$11(lastIndices, function (lastIdxItem, j) {
           var newIdxItem = newIndices[j];
           contentNotChanged &= lastIdxItem.seriesIndex === newIdxItem.seriesIndex && lastIdxItem.dataIndex === newIdxItem.dataIndex;
         });

@@ -182,7 +182,7 @@ function getEchartsData() {
  * 构建饼图数据 点击事件
  */
 function buildPie() {
-    var pie = document.getElementById("container_p");
+    var pie = document.getElementById("container_l");
     var myPie = echarts.init(pie);
     var Poption = {
         title: {
@@ -234,7 +234,7 @@ function buildPie() {
  * @param name
  */
 function buildLine(name) {
-    var line = document.getElementById("container_l");
+    var line = document.getElementById("container_r");
     var myLine = echarts.init(line);
     var Loption = {
         title: {
