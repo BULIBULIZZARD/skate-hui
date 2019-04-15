@@ -57,6 +57,9 @@ function logout() {
     cookie.delete("player_id");
     cookie.delete("player_name");
     cookie.delete("player_token");
+    cookie.delete("organize_id");
+    cookie.delete("organize_name");
+    cookie.delete("organize_token");
     HiAlert("退出成功");
     window.setTimeout("window.location='index.html'", 2000);
 }
