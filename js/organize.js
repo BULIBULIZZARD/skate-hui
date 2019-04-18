@@ -1,7 +1,7 @@
 $("#organize_name").html(cookie.get("organize_name"));
 checkCookie();
 //todo 分页
-//getOrganizeScore();
+getOrganizeScore();
 getOrganizeBestScore();
 getEchartsTreeData();
 getEchartsPieData();
@@ -10,7 +10,7 @@ getEchartsPieData();
 /**
  * 获取运动员所有成绩
  */
-function getOrganizeScore() {
+function getOrganizeScore(page = 1) {
     let id = cookie.get("organize_id");
     $.ajax({
         url: "http://api.fsh.ink/v1/organize/getAllScore",
@@ -19,6 +19,7 @@ function getOrganizeScore() {
         data: {
             id: id,
             token: cookie.get("organize_token"),
+            page: page,
         },
         success: function (evt, req, settings) {
             let html = "";
@@ -44,14 +45,13 @@ function getOrganizeScore() {
                 if (evt['data'].length === 0) {
                     html += "        <tr><td colspan='8' style='text-align: center'>暂无数据</td></tr>\n"
                 }
-                $("#myScore").append(html);
+                $("#myScore").html(html);
             } else {
                 HiAlert("ajax fail")
             }
         }
     })
 }
-
 /**
  * ajax获取单项最好成绩
  */
@@ -100,7 +100,6 @@ function getOrganizeBestScore() {
     })
 
 }
-
 
 /**
  *
@@ -229,7 +228,7 @@ function buildEchartsTree(data) {
     });
     if (option && typeof option === "object") {
         myChart.setOption(option, true);
-        myChart.on('click',function (p) {
+        myChart.on('click', function (p) {
             console.log(p)
         })
     }
@@ -301,12 +300,10 @@ function buildEchartsPie(data) {
     if (Poption && typeof Poption === "object") {
         myPie.setOption(Poption, true);
         myPie.on('click', function (p) {
-           console.log(p)
+            console.log(p)
         });
     }
 }
-
-
 
 
 /**
