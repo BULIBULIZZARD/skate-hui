@@ -17,16 +17,15 @@
     }
 
     #chat-left {
+        margin-top: 20px;
         height: 90vh;
         width: 31%;
         float: left;
         overflow: auto;
     }
-
     #chat-right {
         height: 90vh;
         width: 66%;
-        background: #dddddd;
         float: right;
     }
 
@@ -35,6 +34,8 @@
         height: auto;
         padding: 5px;
         margin-bottom: 2px;
+        border: solid 1px #ddd;
+        border-radius:5px;
     }
 
     .chat-select {
@@ -45,7 +46,8 @@
     }
 
     .chat-name:hover {
-        background: #eafffd;
+        border: solid 1px rgb(0,182,244);
+        border-radius:5px;
     }
 
     .chat_organize_name {
@@ -59,7 +61,7 @@
         float: left;
         padding-left: 10px;
         font-size: 14px;
-        color: #FFFFFF;
+        color: rgba(0,0,0,0);
     }
 
     .chat_end:hover {
@@ -79,6 +81,14 @@
         width: 95%;
         height: 70%;
         margin: 20px auto;
+        box-sizing: border-box;
+        border: solid 1px #ddd;
+        border-radius:5px;
+        overflow: auto;
+    }
+    #chat-show-message:hover{
+        border: solid 1px rgb(0,182,244);
+        border-radius:5px;
     }
 
     #chat-send-message {
@@ -86,6 +96,7 @@
         width: 95%;
         height: 20%;
         margin: 20px auto;
+        display:block;
     }
     #text-send{
         width: 90%;
@@ -94,9 +105,11 @@
         float: left;
     }
     #send-btn{
+        position:relative;
+        top:70%;
         width: 9%;
+        height: 30%;
         float: right;
-        bottom:0;
     }
 </style>
 
@@ -115,7 +128,7 @@
             </p>
             <p class="chat_player_name">
                 <b class="chat_end">x</b>
-                赵子杭
+                赵子杭<b style="color: #ff0000">●</b>
             </p>
         </div>
         <div class="chat-name">
@@ -244,7 +257,7 @@
         <div id="chat-send-message">
             <textarea name="" id="text-send" cols="" rows="" class="textarea radius c" placeholder="说点什么..."></textarea>
             <div id="send-btn">
-                <input  style="width: 100%;" class="btn btn-primary radius" type="button" value="发送"/>
+                    <input  style="width: 100%;height: 100%;float: bottom" class="btn btn-primary radius"  type="button" value="发送"/>
             </div>
         </div>
     </div>
