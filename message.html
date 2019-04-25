@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>消息中心</title>
+    <script type="text/javascript" src="H-ui/lib/jquery/1.9.1/jquery.min.js"></script>
+    <script type="text/javascript" src="H-ui/static/h-ui/js/H-ui.js"></script>
+    <script type="text/javascript" src="js/cookie.js"></script>
+    <link rel="stylesheet" type="text/css" href="H-ui/static/h-ui/css/H-ui.min.css"/>
+</head>
+
+<style>
+    div.chat-div {
+        width: 90%;
+        margin: 0 auto;
+        height: 90vh;
+    }
+
+    #chat-left {
+        height: 90vh;
+        width: 31%;
+        float: left;
+        overflow: auto;
+    }
+
+    #chat-right {
+        height: 90vh;
+        width: 66%;
+        background: #dddddd;
+        float: right;
+    }
+
+    .chat-name {
+        background: #FFFFFF;
+        height: auto;
+        padding: 5px;
+        margin-bottom: 2px;
+    }
+
+    .chat-select {
+        background: #eeeeee;
+        height: auto;
+        padding: 5px;
+        margin-bottom: 2px;
+    }
+
+    .chat-name:hover {
+        background: #eafffd;
+    }
+
+    .chat_organize_name {
+        font-size: 16px;
+        padding-left: 50px;
+        height: 20px;
+    }
+
+
+    .chat_end {
+        float: left;
+        padding-left: 10px;
+        font-size: 14px;
+        color: #FFFFFF;
+    }
+
+    .chat_end:hover {
+        color: #ff0000;
+        cursor: pointer;
+    }
+
+    .chat_player_name {
+        font-size: 14px;
+        text-align: right;
+        padding-right: 20px;
+        height: 20px;
+    }
+
+    #chat-show-message {
+        background: #FFFFFF;
+        width: 95%;
+        height: 70%;
+        margin: 20px auto;
+    }
+
+    #chat-send-message {
+        background: #FFFFFF;
+        width: 95%;
+        height: 20%;
+        margin: 20px auto;
+    }
+    #text-send{
+        width: 90%;
+        height: 100%;
+        resize: none;
+        float: left;
+    }
+    #send-btn{
+        width: 9%;
+        float: right;
+        bottom:0;
+    }
+</style>
+
+<body>
+<div class="topnav">
+    <div class="wp cl">
+        <div class="l" id="nav_left"></div>
+        <div class="r" id="nav_right"></div>
+    </div>
+</div>
+<div class="chat-div">
+    <div id="chat-left">
+        <div class="chat-name  chat-select">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+        <div class="chat-name">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+        <div class="chat-name">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+        <div class="chat-name ">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+        <div class="chat-name">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+        <div class="chat-name">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+        <div class="chat-name">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+        <div class="chat-name">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+        <div class="chat-name">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+        <div class="chat-name">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+        <div class="chat-name">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+        <div class="chat-name">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+        <div class="chat-name">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+        <div class="chat-name">
+            <p class="chat_organize_name">
+                <b>辽宁省冬季运动项目管理中心</b>
+            </p>
+            <p class="chat_player_name">
+                <b class="chat_end">x</b>
+                赵子杭
+            </p>
+        </div>
+
+    </div>
+    <div id="chat-right">
+        <div id="chat-show-message">
+
+        </div>
+        <div id="chat-send-message">
+            <textarea name="" id="text-send" cols="" rows="" class="textarea radius c" placeholder="说点什么..."></textarea>
+            <div id="send-btn">
+                <input  style="width: 100%;" class="btn btn-primary radius" type="button" value="发送"/>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<script type="text/javascript">
+    checkCookie();
+    $(".chat-name").on("click", function () {
+        console.log(this);
+        $(".chat-select").removeClass("chat-select");
+        $(this).addClass("chat-select")
+    });
+    $(".chat_end").on("click", function () {
+        console.log(this);
+        console.log($(this).parent());
+        $(this).parent().parent().remove()
+    })
+
+</script>
+</html>

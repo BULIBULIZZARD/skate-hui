@@ -32,10 +32,11 @@ function checkCookie() {
     let name = cookie.get("player_name");
     let token = cookie.get("player_token");
     if (typeof (id) !== "undefined" && typeof (name) !== "undefined" && typeof (token) !== "undefined") {
+        //todo count最新消息
         $("#nav_left").html("<a href='../index.html'>" + name + ", 欢迎访问</a>");
         $("#nav_right").html("<span class=\"r_nav\">[ <a rel=\"nofollow\" " +
             "href=\"../player.html\">个人中心</a> ]</span><span class=\"pipe\">|</span>" +
-            "<span class=\"r_nav\">[ <a href=\"javascript:logout();\" rel=\"nofollow\">退出登陆</a> ]</span>")
+            "<span class=\"r_nav\">[ <a href=\"javascript:logout();\" rel=\"nofollow\">退出登陆</a> ]</span>");
         return ""
     }
     id = cookie.get("organize_id");
