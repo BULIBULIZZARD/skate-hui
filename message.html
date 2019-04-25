@@ -111,6 +111,49 @@
         height: 30%;
         float: right;
     }
+
+    .chat_massage_send{
+        margin: 5px 10px;
+        padding: 4px;
+        float: right;
+        width: 60%;
+        overflow: auto;
+    }
+    .chat_massage_send p{
+        float: right;
+        padding: 5px;
+        max-width: 90%;
+        font-size: 14px;
+        text-align: right;
+        border: solid 1px #ddd;
+        border-radius:5px;
+    }
+    .chat_massage_send p:hover{
+        border: solid 1px rgb(0,182,244);
+        border-radius:5px;
+    }
+
+    .chat_massage_get{
+        margin: 5px 10px;
+        padding: 4px;
+        float: left;
+        width: 60%;
+        overflow: auto;
+    }
+    .chat_massage_get p{
+        float: left;
+        padding: 5px;
+        max-width: 90%;
+        font-size: 14px;
+        text-align: left;
+        border: solid 1px #ddd;
+        border-radius:5px;
+    }
+    .chat_massage_get p:hover{
+        border: solid 1px rgb(0,182,244);
+        border-radius:5px;
+    }
+
 </style>
 
 <body>
@@ -128,7 +171,7 @@
             </p>
             <p class="chat_player_name">
                 <b class="chat_end">x</b>
-                赵子杭<b style="color: #ff0000">●</b>
+                赵子杭<b class="new_mark" style="color: #ff0000">●</b>
             </p>
         </div>
         <div class="chat-name">
@@ -149,15 +192,7 @@
                 赵子杭
             </p>
         </div>
-        <div class="chat-name ">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭
-            </p>
-        </div>
+
         <div class="chat-name">
             <p class="chat_organize_name">
                 <b>辽宁省冬季运动项目管理中心</b>
@@ -167,69 +202,7 @@
                 赵子杭
             </p>
         </div>
-        <div class="chat-name">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭
-            </p>
-        </div>
-        <div class="chat-name">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭
-            </p>
-        </div>
-        <div class="chat-name">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭
-            </p>
-        </div>
-        <div class="chat-name">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭
-            </p>
-        </div>
-        <div class="chat-name">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭
-            </p>
-        </div>
-        <div class="chat-name">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭
-            </p>
-        </div>
-        <div class="chat-name">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭
-            </p>
-        </div>
+
         <div class="chat-name">
             <p class="chat_organize_name">
                 <b>辽宁省冬季运动项目管理中心</b>
@@ -252,7 +225,9 @@
     </div>
     <div id="chat-right">
         <div id="chat-show-message">
-
+            <div class="chat_massage_send"><p>ssssssssssssssssssssssssssssssssssssssssssss</p></div>
+            <div class="chat_massage_send"><p>特特特特特测试</p></div>
+            <div class="chat_massage_get"><p>特特特特特测试</p></div>
         </div>
         <div id="chat-send-message">
             <textarea name="" id="text-send" cols="" rows="" class="textarea radius c" placeholder="说点什么..."></textarea>
@@ -266,15 +241,15 @@
 <script type="text/javascript">
     checkCookie();
     $(".chat-name").on("click", function () {
-        console.log(this);
         $(".chat-select").removeClass("chat-select");
+        $(this).find(".new_mark").remove();
         $(this).addClass("chat-select")
     });
     $(".chat_end").on("click", function () {
-        console.log(this);
         console.log($(this).parent());
         $(this).parent().parent().remove()
     })
+
 
 </script>
 </html>
