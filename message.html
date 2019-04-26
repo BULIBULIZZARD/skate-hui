@@ -23,19 +23,20 @@
         float: left;
         overflow: auto;
     }
+
     #chat-right {
         height: 90vh;
         width: 66%;
         float: right;
     }
 
-    .chat-name {
+    .chat_name {
         background: #FFFFFF;
         height: auto;
         padding: 5px;
         margin-bottom: 2px;
         border: solid 1px #ddd;
-        border-radius:5px;
+        border-radius: 5px;
     }
 
     .chat-select {
@@ -46,8 +47,8 @@
     }
 
     .chat-name:hover {
-        border: solid 1px rgb(0,182,244);
-        border-radius:5px;
+        border: solid 1px rgb(0, 182, 244);
+        border-radius: 5px;
     }
 
     .chat_organize_name {
@@ -61,7 +62,7 @@
         float: left;
         padding-left: 10px;
         font-size: 14px;
-        color: rgba(0,0,0,0);
+        color: rgba(0, 0, 0, 0);
     }
 
     .chat_end:hover {
@@ -83,12 +84,13 @@
         margin: 20px auto;
         box-sizing: border-box;
         border: solid 1px #ddd;
-        border-radius:5px;
+        border-radius: 5px;
         overflow: auto;
     }
-    #chat-show-message:hover{
-        border: solid 1px rgb(0,182,244);
-        border-radius:5px;
+
+    #chat-show-message:hover {
+        border: solid 1px rgb(0, 182, 244);
+        border-radius: 5px;
     }
 
     #chat-send-message {
@@ -96,62 +98,72 @@
         width: 95%;
         height: 20%;
         margin: 20px auto;
-        display:block;
+        display: block;
     }
-    #text-send{
+
+    #text-send {
         width: 90%;
         height: 100%;
         resize: none;
         float: left;
     }
-    #send-btn{
-        position:relative;
-        top:70%;
+
+    #send-btn {
+        position: relative;
+        top: 70%;
         width: 9%;
         height: 30%;
         float: right;
     }
 
-    .chat_massage_send{
+    .chat_massage_send {
         margin: 5px 10px;
         padding: 4px;
         float: right;
         width: 60%;
         overflow: auto;
     }
-    .chat_massage_send p{
+
+    .chat_massage_send p {
         float: right;
         padding: 5px;
         max-width: 90%;
         font-size: 14px;
         text-align: right;
         border: solid 1px #ddd;
-        border-radius:5px;
-    }
-    .chat_massage_send p:hover{
-        border: solid 1px rgb(0,182,244);
-        border-radius:5px;
+        border-radius: 5px;
     }
 
-    .chat_massage_get{
+    .chat_massage_send p:hover {
+        border: solid 1px rgb(0, 182, 244);
+        border-radius: 5px;
+    }
+
+    .chat_massage_get {
         margin: 5px 10px;
         padding: 4px;
         float: left;
         width: 60%;
         overflow: auto;
     }
-    .chat_massage_get p{
+
+    .chat_massage_get p {
         float: left;
         padding: 5px;
         max-width: 90%;
         font-size: 14px;
         text-align: left;
         border: solid 1px #ddd;
-        border-radius:5px;
+        border-radius: 5px;
     }
-    .chat_massage_get p:hover{
-        border: solid 1px rgb(0,182,244);
-        border-radius:5px;
+
+    .chat_massage_get p:hover {
+        border: solid 1px rgb(0, 182, 244);
+        border-radius: 5px;
+    }
+
+    .enable_show {
+        display: none;
     }
 </style>
 <body>
@@ -163,91 +175,186 @@
 </div>
 <div class="chat-div">
     <div id="chat-left">
-        <div class="chat-name  chat-select">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭<b class="new_mark" style="color: #ff0000">●</b>
-            </p>
-        </div>
-        <div class="chat-name">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭
-            </p>
-        </div>
-        <div class="chat-name">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭
-            </p>
-        </div>
-
-        <div class="chat-name">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭
-            </p>
-        </div>
-
-        <div class="chat-name">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭
-            </p>
-        </div>
-        <div class="chat-name">
-            <p class="chat_organize_name">
-                <b>辽宁省冬季运动项目管理中心</b>
-            </p>
-            <p class="chat_player_name">
-                <b class="chat_end">x</b>
-                赵子杭
-            </p>
-        </div>
 
     </div>
     <div id="chat-right">
         <div id="chat-show-message">
-            <div class="chat_massage_send"><p>ssssssssssssssssssssssssssssssssssssssssssss</p></div>
-            <div class="chat_massage_send"><p>特特特特特测试</p></div>
-            <div class="chat_massage_get"><p>特特特特特测试</p></div>
+
         </div>
         <div id="chat-send-message">
             <textarea name="" id="text-send" cols="" rows="" class="textarea radius c" placeholder="说点什么..."></textarea>
             <div id="send-btn">
-                    <input  style="width: 100%;height: 100%;float: bottom" class="btn btn-primary radius"  type="button" value="发送"/>
+                <input style="width: 100%;height: 100%;float: bottom" class="btn btn-primary radius" type="button"
+                       value="发送"/>
             </div>
         </div>
     </div>
 </div>
 </body>
 <script type="text/javascript">
+
+    var current_chat_id = 0;
     checkCookie();
-    $(".chat-name").on("click", function () {
-        $(".chat-select").removeClass("chat-select");
-        $(this).find(".new_mark").remove();
-        $(this).addClass("chat-select")
-    });
-    $(".chat_end").on("click", function () {
-        console.log($(this).parent());
-        $(this).parent().parent().remove()
-    })
+    checkToken();
+    getChatting();
+    getChat();
 
 
+    /**
+     * 左侧控件绑定
+     */
+    function bindChatLeftEvent() {
+        var chat_name = $(".chat_name");
+        var chat_end = $(".chat_end");
+        chat_name.off();
+        chat_end.off();
+        chat_name.on("click", function () {
+            $(".chat-select").removeClass("chat-select");
+            $(this).find(".new_mark").remove();
+            $(this).addClass("chat-select");
+            current_chat_id = $(this).attr("chat_id");
+            console.log(current_chat_id);
+            filterChatLog();
+        });
+        chat_end.on("click", function () {
+            let parent = $(this).parent().parent();
+            if (parent.attr("chat_id") == current_chat_id) {
+                parent.remove();
+                let next = $($("#chat-left").children().get(0));
+                next.addClass("chat-select");
+                current_chat_id = next.attr("chat_id");
+                console.log(current_chat_id);
+                filterChatLog();
+            } else {
+                parent.remove()
+            }
+        });
+
+    }
+
+    /**
+     * 刷新聊天记录状态
+     */
+    function filterChatLog() {
+        let send = $(".chat_massage_send");
+        let get = $(".chat_massage_get");
+        send.addClass("enable_show");
+        get.addClass("enable_show");
+        send.each(function () {
+            if (current_chat_id == $(this).attr("chat_id")) {
+                $(this).removeClass("enable_show")
+            }
+        });
+        get.each(function () {
+            if (current_chat_id == $(this).attr("chat_id")) {
+                $(this).removeClass("enable_show")
+            }
+        })
+    }
+
+    /**
+     * check
+     */
+    function checkToken() {
+        $.ajax({
+            url: "http://api.fsh.ink/v1/player/status",
+            method: "GET",
+            dataType: "json",
+            data: {
+                id: cookie.get("player_id"),
+                token: cookie.get("player_token"),
+            },
+            success: function (evt, req, settings) {
+                if (req === "success") {
+                    if (evt['message'] === "fail") {
+                        token_timeout();
+                    }
+                    console.log()
+                } else {
+                    HiAlert('ajax fail');
+                }
+            }
+        })
+    }
+
+    function HiAlert(string, time = 2000) {
+        $.Huimodalalert(string, time)
+    }
+
+    function getChatting() {
+        $.ajax({
+            url: "http://api.fsh.ink/v1/player/chatting",
+            method: "GET",
+            dataType: "json",
+            data: {
+                id: cookie.get("player_id"),
+                token: cookie.get("player_token"),
+            },
+            success: function (evt, req, settings) {
+                if (req === "success") {
+                    if (evt['message'] === "fail") {
+                        token_timeout();
+                    }
+                    let html = "";
+                    let is_new = "<b class=\"new_mark\" style=\"color: #ff0000\">●</b>";
+                    for (let i = 0; i < evt['data'].length; i++) {
+                        html += "<div class=\"chat_name\" chat_id = " + evt['data'][i]['with_id'] + ">\n" +
+                            "            <p class=\"chat_organize_name\">\n" +
+                            "                <b>" + evt['data'][i]['organize'] + "</b>\n" +
+                            "            </p>\n" +
+                            "            <p class=\"chat_player_name\">\n" +
+                            "                <b class=\"chat_end\">x</b>\n" +
+                            "                " + evt['data'][i]['player_name']
+                        if (evt['data'][i]['is_new'] === 1) html += is_new;
+                        html += "            </p>\n" +
+                            "        </div>";
+                    }
+                    let chat_left = $("#chat-left").html(html);
+                    chat_left.html(html);
+                    let firstChatting = $(chat_left.children().get(0));
+                    firstChatting.addClass("chat-select");
+                    current_chat_id = firstChatting.attr("chat_id");
+                    firstChatting.find(".new_mark").remove();
+                    bindChatLeftEvent();
+                    filterChatLog();
+                } else {
+                    HiAlert('ajax fail');
+                }
+            }
+        })
+    }
+
+    function getChat() {
+        $.ajax({
+            url: "http://api.fsh.ink/v1/player/chatLog",
+            method: "GET",
+            dataType: "json",
+            data: {
+                id: cookie.get("player_id"),
+                token: cookie.get("player_token"),
+            },
+            success: function (evt, req, settings) {
+                if (req === "success") {
+                    if (evt['message'] === "fail") {
+                        token_timeout();
+                    }
+                    let html = "";
+                    let pid = cookie.get("player_id");
+                    for (let i = 0; i < evt['data'].length; i++) {
+                        if (pid == evt['data'][i]['from_id']) {
+                            html += "<div class=\"chat_massage_send enable_show\"chat_id =\"" + evt['data'][i]['to_id'] + "\"><p>" + evt['data'][i]['message'] + "</p></div>"
+                        } else {
+                            html += "<div class=\"chat_massage_get enable_show\" chat_id =\"" + evt['data'][i]['from_id'] + "\" ><p>" + evt['data'][i]['message'] + "</p></div>"
+                        }
+                    }
+                    $("#chat-show-message").html(html);
+                    bindChatLeftEvent();
+                    filterChatLog();
+                } else {
+                    HiAlert('ajax fail');
+                }
+            }
+        })
+    }
 </script>
 </html>
