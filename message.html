@@ -184,7 +184,7 @@
         <div id="chat-send-message">
             <textarea name="" id="text-send" cols="" rows="" class="textarea radius c" placeholder="说点什么..."></textarea>
             <div id="send-btn">
-                <input style="width: 100%;height: 100%;float: bottom" class="btn btn-primary radius" type="button"
+                <input style="width: 100%;height: 100%;float: bottom" class="btn btn-primary radius" type="button" onclick="sendMessage();"
                        value="发送"/>
             </div>
         </div>
@@ -404,5 +404,18 @@
         }
     }
 
+    function sendMessage() {
+        //todo check token
+        let text_area = $("#text-send");
+        if (text_area.val() == null||text_area.val()===""){
+            HiAlert("消息内容不能为空",1000);
+            return false;
+        }
+        websocket_client.send("{\"from\":\""+cookie.get("player_id")+"\",\"msg\":\""+ text_area.val() +"\",\"to\":\""+current_chat_id+"\"}");
+        let html = "<div class=\"chat_massage_send enable_show\" chat_id =\"" + current_chat_id + "\" ><p>" + text_area.val() + "</p></div>";
+        $("#chat-show-message").append(html);
+        filterChatLog();
+        text_area.val("");
+    }
 </script>
 </html>
