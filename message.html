@@ -198,14 +198,15 @@
     checkToken();
     getChatting();
     getChat();
-
+    var websocket_client = '';
+    initWebsocket();
 
     /**
      * 左侧控件绑定
      */
     function bindChatLeftEvent() {
-        var chat_name = $(".chat_name");
-        var chat_end = $(".chat_end");
+        let chat_name = $(".chat_name");
+        let chat_end = $(".chat_end");
         chat_name.off();
         chat_end.off();
         chat_name.on("click", function () {
@@ -249,7 +250,9 @@
             if (current_chat_id == $(this).attr("chat_id")) {
                 $(this).removeClass("enable_show")
             }
-        })
+        });
+        let show = $("#chat-show-message");
+        show.scrollTop(show[0].scrollHeight);
     }
 
     /**
@@ -356,5 +359,50 @@
             }
         })
     }
+
+    function initWebsocket() {
+        checkToken();
+        let uri = 'ws://api.fsh.ink/v1/player/chat';
+        websocket_client = new WebSocket(uri);
+        websocket_client.onopen = function () {
+            console.log('Connected');
+            websocket_client.send("{\"from\":\"" + cookie.get("player_id") + "\"}");
+        };
+        websocket_client.onmessage = function (evt) {
+            let obj = eval('(' + evt.data + ')');
+            getMessage(obj['Msg'], obj['From']);
+            if (current_chat_id != obj['From']){
+                isNewStatus(obj['Msg'], obj['From']);
+            }
+        };
+        websocket_client.onclose = function () {
+            console.log("close");
+            initWebsocket()
+        };
+    }
+
+    function getMessage(message, from_id) {
+        let html = "<div class=\"chat_massage_get enable_show\" chat_id =\"" + from_id + "\" ><p>" + message + "</p></div>";
+        let show = $("#chat-show-message");
+        show.append(html);
+        filterChatLog();
+    }
+
+    function isNewStatus(message, from_id) {
+        let chat_name = $(".chat_name");
+        let is_new = "<b class=\"new_mark\" style=\"color: #ff0000\">●</b>";
+        let flag = 0;
+        chat_name.each(function () {
+            if ($(this).attr("chat_id") == from_id) {
+                $(this).find(".chat_player_name").append(is_new);
+                flag = 1;
+                return false;
+            }
+        });
+        if (flag===0){
+            //todo prepend
+        }
+    }
+
 </script>
 </html>
