@@ -1,0 +1,173 @@
+div.chat-div {
+    width: 90%;
+    margin: 0 auto;
+    height: 90vh;
+}
+
+#chat-left {
+    margin-top: 20px;
+    height: 90vh;
+    width: 31%;
+    float: left;
+    overflow: auto;
+}
+
+#chat-right {
+    height: 90vh;
+    width: 66%;
+    float: right;
+}
+
+.chat_name {
+    background: #FFFFFF;
+    height: auto;
+    padding: 5px;
+    margin-bottom: 2px;
+    border: solid 1px #ddd;
+    border-radius: 5px;
+}
+
+.chat-select {
+    background: #eeeeee;
+    height: auto;
+    padding: 5px;
+    margin-bottom: 2px;
+}
+
+.chat-name:hover {
+    border: solid 1px rgb(0, 182, 244);
+    border-radius: 5px;
+}
+
+.chat_organize_name {
+    font-size: 16px;
+    padding-left: 50px;
+    height: 20px;
+}
+
+
+.chat_end {
+    float: left;
+    padding-left: 10px;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0);
+}
+
+.chat_end:hover {
+    color: #ff0000;
+    cursor: pointer;
+}
+
+.chat_player_name {
+    font-size: 14px;
+    text-align: right;
+    padding-right: 20px;
+    height: 20px;
+}
+
+#chat-show-message {
+    background: #FFFFFF;
+    width: 95%;
+    height: 70%;
+    margin: 20px auto;
+    box-sizing: border-box;
+    border: solid 1px #ddd;
+    border-radius: 5px;
+    overflow: auto;
+}
+
+#chat-show-message:hover {
+    border: solid 1px rgb(0, 182, 244);
+    border-radius: 5px;
+}
+
+#chat-send-message {
+    background: #FFFFFF;
+    width: 95%;
+    height: 20%;
+    margin: 20px auto;
+    display: block;
+}
+
+#text-send {
+    width: 90%;
+    height: 100%;
+    resize: none;
+    float: left;
+}
+
+#send-btn {
+    position: relative;
+    top: 70%;
+    width: 9%;
+    height: 30%;
+    float: right;
+}
+
+.chat_massage_send {
+    position: relative;
+    margin: 5px 10px;
+    padding: 4px;
+    float: right;
+    width: 60%;
+    overflow: auto;
+}
+
+.chat_massage_send p {
+    float: right;
+    padding: 5px;
+    max-width: 90%;
+    font-size: 14px;
+    text-align: right;
+    border: solid 1px #ddd;
+    border-radius: 5px;
+}
+
+.show_time_send {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    font-size: 5px;
+    color: #bcbcbc;
+}
+
+.chat_massage_send p:hover {
+    border: solid 1px rgb(0, 182, 244);
+    border-radius: 5px;
+}
+
+.chat_massage_get {
+    position: relative;
+    margin: 5px 10px;
+    padding: 4px;
+    float: left;
+    width: 60%;
+    overflow: auto;
+}
+
+.show_time_get {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    font-size: 5px;
+    color: #bcbcbc;
+}
+
+.chat_massage_get p {
+    float: left;
+    padding: 5px;
+    max-width: 90%;
+    font-size: 14px;
+    text-align: left;
+    border: solid 1px #ddd;
+    border-radius: 5px;
+}
+
+.chat_massage_get p:hover {
+    border: solid 1px rgb(0, 182, 244);
+    border-radius: 5px;
+}
+
+.enable_show {
+    display: none;
+}
