@@ -34,8 +34,8 @@ function checkCookie() {
     if (typeof (id) !== "undefined" && typeof (name) !== "undefined" && typeof (token) !== "undefined") {
         //todo count最新消息
         $("#nav_left").html("<a href='../index.html'>" + name + ", 欢迎访问</a>");
-        $("#nav_right").html("<span class=\"r_nav\">[ <a rel=\"nofollow\" " +
-            "href=\"../player.html\">个人中心</a> ]</span><span class=\"pipe\">|</span>" +
+        $("#nav_right").html("<span class=\"r_nav\">" + "[ <a rel=\"nofollow\" href=\"../message.html\">消息中心<em  class='you_get_message' style='color: #ee5f5b;'></em></a> ]</span><span class=\"pipe\">|</span>" +
+            "<span class=\"r_nav\">[ <a rel=\"nofollow\" href=\"../player.html\">个人中心</a> ]</span><span class=\"pipe\">|</span>" +
             "<span class=\"r_nav\">[ <a href=\"javascript:logout();\" rel=\"nofollow\">退出登陆</a> ]</span>");
         return ""
     }
@@ -71,4 +71,28 @@ function token_timeout() {
     cookie.delete("player_token");
     HiAlert("令牌过期请重新登陆");
     window.setTimeout("window.location='index.html'", 2000);
+}
+
+function page(page, page_num) {
+    let pre = "<a onclick='page_func(" + (current_page - 1) + ")'><</a>";
+    let fix = "<a onclick='page_func(" + (current_page + 1) + ")'>></a>";
+    let min = 1;
+    let max = page_num;
+    if (page > 6) {
+        pre += "<a onclick='page_func(" + (page - 6) + ")'>...</a>"
+        min = page - 5;
+    }
+    if (page + 6 < page_num) {
+        fix = "<a onclick='page_func(" + (page + 6) + ")'>...</a>" + fix;
+        max = page + 5
+    }
+    for (let i = min; i <= max; i++) {
+        if (i == page) {
+            pre += "<a class = \"page_select\" onclick='page_func(" + i + ")'>" + i + "</a>"
+            continue;
+        }
+        pre += "<a onclick='page_func(" + i + ")'>" + i + "</a>"
+    }
+    pre += fix;
+    $(".pagination").html(pre)
 }

@@ -1,16 +1,18 @@
 $("#organize_name").html(cookie.get("organize_name"));
+let current_page = 1;
 checkCookie();
 //todo 分页
 getOrganizeScore();
 getOrganizeBestScore();
 getEchartsTreeData();
 getEchartsPieData();
-
+let player_id = "";
+let match_name = "";
 
 /**
  * 获取运动员所有成绩
  */
-function getOrganizeScore(page = 1) {
+function getOrganizeScore(p, player_id = "", match_name = "") {
     let id = cookie.get("organize_id");
     $.ajax({
         url: "http://api.fsh.ink/v1/organize/getAllScore",
@@ -19,7 +21,9 @@ function getOrganizeScore(page = 1) {
         data: {
             id: id,
             token: cookie.get("organize_token"),
-            page: page,
+            page: p,
+            player_id: player_id,
+            match_name: match_name,
         },
         success: function (evt, req, settings) {
             let html = "";
@@ -27,6 +31,18 @@ function getOrganizeScore(page = 1) {
                 if (evt['message'] === "fail") {
                     token_timeout();
                 }
+                html += "<thead>\n" +
+                    "                    <tr>\n" +
+                    "                        <th>项目</th>\n" +
+                    "                        <th>组别</th>\n" +
+                    "                        <th>姓名</th>\n" +
+                    "                        <th>性别</th>\n" +
+                    "                        <th>赛别</th>\n" +
+                    "                        <th>分组</th>\n" +
+                    "                        <th>名次</th>\n" +
+                    "                        <th>成绩</th>\n" +
+                    "                    </tr>\n" +
+                    "                    </thead>";
                 for (let i = 0; i < evt['data'].length; i++) {
                     let group = evt['data'][i]['s_group'];
                     group = group.replace("第", "");
@@ -46,12 +62,15 @@ function getOrganizeScore(page = 1) {
                     html += "        <tr><td colspan='8' style='text-align: center'>暂无数据</td></tr>\n"
                 }
                 $("#myScore").html(html);
+                current_page = evt['page'];
+                page(evt['page'], evt['page_num']);
             } else {
                 HiAlert("ajax fail")
             }
         }
     })
 }
+
 /**
  * ajax获取单项最好成绩
  */
@@ -229,7 +248,10 @@ function buildEchartsTree(data) {
     if (option && typeof option === "object") {
         myChart.setOption(option, true);
         myChart.on('click', function (p) {
-            console.log(p)
+
+            getOrganizeScore(1, p['data']['value']);
+            player_id = p['data']['value'];
+            match_name = "";
         })
     }
 }
@@ -300,7 +322,9 @@ function buildEchartsPie(data) {
     if (Poption && typeof Poption === "object") {
         myPie.setOption(Poption, true);
         myPie.on('click', function (p) {
-            console.log(p)
+            getOrganizeScore(1, "", p['data']['name']);
+            player_id = "";
+            match_name = p['data']['name'];
         });
     }
 }
@@ -341,3 +365,6 @@ HiAlert = function (string, time = 2000) {
     $.Huimodalalert(string, time)
 };
 
+function page_func(page) {
+    getOrganizeScore(page, player_id, match_name)
+}

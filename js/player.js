@@ -1,7 +1,7 @@
 checkCookie();
 getPlayerScore();
 getPlayerBestScore();
-
+let current_page = 1;
 var myData = [];
 var show_data = [];
 getEchartsData();
@@ -49,7 +49,7 @@ HiAlert = function (string, time = 2000) {
 /**
  * 获取运动员所有成绩
  */
-function getPlayerScore() {
+function getPlayerScore(p = 1) {
     let id = cookie.get("player_id");
     $.ajax({
         url: "http://api.fsh.ink/v1/player/getPlayerScore",
@@ -58,6 +58,7 @@ function getPlayerScore() {
         data: {
             id: id,
             token: cookie.get("player_token"),
+            page: p,
         },
         success: function (evt, req, settings) {
             let html = "";
@@ -65,11 +66,22 @@ function getPlayerScore() {
                 if (evt['message'] === "fail") {
                     token_timeout();
                 }
+                html +="<thead>\n" +
+                    "                    <tr>\n" +
+                    "                        <th>项目</th>\n" +
+                    "                        <th>组别</th>\n" +
+                    "                        <th>性别</th>\n" +
+                    "                        <th>赛别</th>\n" +
+                    "                        <th>分组</th>\n" +
+                    "                        <th>名次</th>\n" +
+                    "                        <th>成绩</th>\n" +
+                    "                    </tr>\n" +
+                    "                    </thead>";
                 for (let i = 0; i < evt['data'].length; i++) {
                     let group = evt['data'][i]['s_group'];
-                    group = group.replace("第","");
-                    group = group.replace("组","");
-                    html += "<tr onclick='new OnGroupBtnClick("+evt['data'][i]['match_id'] +","+ group + ") ' >\n" +
+                    group = group.replace("第", "");
+                    group = group.replace("组", "");
+                    html += "<tr onclick='new OnGroupBtnClick(" + evt['data'][i]['match_id'] + "," + group + ") ' >\n" +
                         "        <td>" + evt['data'][i]['match_name'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['group_type'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['gender'] + "</td>\n" +
@@ -82,7 +94,9 @@ function getPlayerScore() {
                 if (evt['data'].length === 0) {
                     html += "        <tr><td colspan='8' style='text-align: center'>暂无数据</td></tr>\n"
                 }
-                $("#myScore").append(html);
+                $("#myScore").html(html);
+                current_page = evt['page'];
+                page(evt['page'],evt['page_num']);
                 $("#organize_name").html(evt['data'][0]['organize']);
                 $("#player_name").html(evt['data'][0]['name']);
             } else {
@@ -115,9 +129,9 @@ function getPlayerBestScore() {
                 for (let i = 0; i < 5; i++) {
                     if (evt[i] !== "filter") {
                         let group = evt[i]['s_group'];
-                        group = group.replace("第","");
-                        group = group.replace("组","");
-                        html += "<tr onclick=' new OnGroupBtnClick(" + evt[i]['match_id'] + "," +group + ")'>\n" +
+                        group = group.replace("第", "");
+                        group = group.replace("组", "");
+                        html += "<tr onclick=' new OnGroupBtnClick(" + evt[i]['match_id'] + "," + group + ")'>\n" +
                             "        <td>" + evt[i]['match_name'] + "</td>\n" +
                             "        <td>" + evt[i]['group_type'] + "</td>\n" +
                             "        <td>" + evt[i]['gender'] + "</td>\n" +
@@ -158,16 +172,16 @@ function getEchartsData() {
                     token_timeout();
                 }
                 myData = evt;
-                let match = ["4圈","7圈","500米","1000米","1500米"];
+                let match = ["4圈", "7圈", "500米", "1000米", "1500米"];
                 let name = "";
-                for (let i =0;i<match.length;i++){
+                for (let i = 0; i < match.length; i++) {
                     show_data = myData[match[i]];
-                    if (show_data!==""){
-                      name  = match[i];
-                      break;
+                    if (show_data !== "") {
+                        name = match[i];
+                        break;
                     }
                 }
-                if (name !== ""){
+                if (name !== "") {
                     buildPie();
                     buildLine(name);
                 }
@@ -280,22 +294,22 @@ function buildLine(name) {
     };
     if (Loption && typeof Loption === "object") {
         myLine.setOption(Loption, true);
-        myLine.on('click',function (p) {
-            new OnGroupBtnClick(show_data['match_id'][p['dataIndex']],show_data['group'][p['dataIndex']]);
+        myLine.on('click', function (p) {
+            new OnGroupBtnClick(show_data['match_id'][p['dataIndex']], show_data['group'][p['dataIndex']]);
         })
     }
-    
+
 }
 
 
-function  pieCount(v){
-    if (v === "")return 0;
+function pieCount(v) {
+    if (v === "") return 0;
     return v['value'].length
 }
 
 
 /**
- * 
+ *
  * @param id
  * @param group
  * @constructor
@@ -341,4 +355,9 @@ function OnGroupBtnClick(id, group) {
         }
     })
 
+}
+
+
+function page_func(page){
+    getPlayerScore(page)
 }

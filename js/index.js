@@ -1,4 +1,6 @@
-function getContest(obj) {
+getContest();
+
+function getContest() {
     $.ajax(
         {
             url: "http://api.fsh.ink/v1/index/getContest",
@@ -14,7 +16,8 @@ function getContest(obj) {
                             "        <div class=\"info\" id=\"" + evt['data'][i]['id'] + "\"></div>\n" +
                             "    </li>\n";
                     }
-                    $(obj).html(html)
+                    $("#Huifold1").html(html);
+                    showMatch("#Huifold1 .item h4", "#Huifold1 .item .info", "fast", 1, "click"); /*5个参数顺序不可打乱，分别是：相应区,隐藏显示的内容,速度,类型,事件*/
                 } else {
                     HiAlert("ajax fail");
                     //todo fail handle
@@ -25,8 +28,8 @@ function getContest(obj) {
 }
 
 
-showMatch = function (obj, obj_c, speed, obj_type, Event) {
-    $(obj).off(Event).on(Event, function () {
+function showMatch(obj, obj_c, speed, obj_type, Event) {
+    $(obj).on(Event, function () {
         if ($(this).next().is(":visible")) {
             $(this).next()['isSetEvents'] = true;
             $(this).next().slideUp(speed).end().removeClass("selected");
@@ -42,8 +45,7 @@ showMatch = function (obj, obj_c, speed, obj_type, Event) {
             $(this).find("b").html("-")
         }
     });
-    $("obj").unbind(Event);
-};
+}
 
 jQuery.GetMatch = function (obj) {
     let contestId = obj.attr("id");
@@ -93,11 +95,6 @@ jQuery.GetMatch = function (obj) {
 };
 
 
-getContest("#Huifold1");
-
-$("body").on("click", "#Huifold1", function () {
-    showMatch("#Huifold1 .item h4", "#Huifold1 .item .info", "fast", 1, "click"); /*5个参数顺序不可打乱，分别是：相应区,隐藏显示的内容,速度,类型,事件*/
-});
 MatchOnClick = function (num, id) {
     modaldemo(num, id)
 };
