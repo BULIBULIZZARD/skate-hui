@@ -230,11 +230,13 @@ function sendMessage() {
         HiAlert("消息内容不能为空", 1000);
         return false;
     }
-    websocket_client.send("{\"from\":\"" + cookie.get("player_id") + "\",\"msg\":\"" + text_area.val() + "\",\"to\":\"" + current_chat_id + "\"}");
-    let html = "<div class=\"chat_massage_send enable_show\" chat_id =\"" + current_chat_id + "\" ><p>" + text_area.val() + "</p><div class=\"show_time_send \">" + formatDate(new Date()) + "</div></div>";
+
+    let msg = unhtml(text_area.val());
+    console.log(msg);
+    websocket_client.send("{\"from\":\"" + cookie.get("player_id") + "\",\"msg\":\"" + msg+ "\",\"to\":\"" + current_chat_id + "\"}");
+    let html = "<div class=\"chat_massage_send enable_show\" chat_id =\"" + current_chat_id + "\" ><p>" + msg + "</p><div class=\"show_time_send \">" + formatDate(new Date()) + "</div></div>";
     $("#chat-show-message").append(html);
     filterChatLog();
-    text_area.val("");
 }
 
 function getNewChatName(with_id) {
@@ -349,4 +351,15 @@ function formatDate(now) {
     var minute = now.getMinutes();
     var second = now.getSeconds();
     return year + "-" + month + "-" + date + " " + hour + ":" + minute + ":" + second;
+}
+
+function unhtml(str) {
+    return str ? str.replace(/[<">']/g, (a) => {
+        return {
+            '<': '&lt;',
+            '"': '&quot;',
+            '>': '&gt;',
+            "'": '&#39;'
+        }[a]
+    }) : '';
 }
