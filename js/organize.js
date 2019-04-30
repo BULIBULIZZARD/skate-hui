@@ -128,8 +128,12 @@ function getOrganizeBestScore() {
  */
 function OnGroupBtnClick(id, group) {
     $.ajax({
-        url: "http://api.fsh.ink/v1/index/getMatchScore/" + id + "/" + group,
+        url: "http://api.fsh.ink/v1/index/getMatchScore",
         method: "GET",
+        data: {
+            id: id,
+            group: group,
+        },
         success: function (evt, req) {
             if (req === "success") {
                 let html = "<table class=\"table table-border table-bg table-bordered table-striped table-hover\">\n" +

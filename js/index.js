@@ -1,4 +1,5 @@
 getContest();
+checkCookie();
 
 function getContest() {
     $.ajax(
@@ -50,7 +51,12 @@ function showMatch(obj, obj_c, speed, obj_type, Event) {
 jQuery.GetMatch = function (obj) {
     let contestId = obj.attr("id");
     $.ajax({
-        url: "http://api.fsh.ink/v1/index/getContestMatch/" + contestId,
+        url: "http://api.fsh.ink/v1/index/getContestMatch",
+        method: "GET",
+        dataType: "json",
+        data: {
+            cid: contestId,
+        },
         success: function (evt, req, settings) {
             if (req === "success") {
                 let html = "<table class=\"table table-border table-bg table-bordered table-striped table-hover\">\n" +
@@ -110,8 +116,12 @@ function modaldemo(num, id) {
 
 function OnGroupBtnClick(id, group) {
     $.ajax({
-        url: "http://api.fsh.ink/v1/index/getMatchScore/" + id + "/" + group,
+        url: "http://api.fsh.ink/v1/index/getMatchScore",
         method: "GET",
+        data: {
+            id: id,
+            group: group
+        },
         success: function (evt, req) {
             if (req === "success") {
                 let html = "<table class=\"table table-border table-bg table-bordered table-striped table-hover\">\n" +
@@ -132,7 +142,15 @@ function OnGroupBtnClick(id, group) {
                         "        <td>" + evt['data'][i]['no'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['row_num'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['head_num'] + "</td>\n" +
-                        "        <td>" + evt['data'][i]['name'] + "</td>\n" +
+                        "        <td>" + evt['data'][i]['name'] ;
+                    if (FollowList != "") {
+                        if (in_array(evt['data'][i]['player_id'], FollowList)) {
+                            html += "<i class=\"icoon Hui-iconfont\" title=\"已关注关注\">&#xe676;</i> ";
+                        } else {
+                            html += "<i class=\"icoon Hui-iconfont\" onclick='scoreFollow(" + evt['data'][i]['player_id'] + ",this)' title=\"加关注\">&#xe60d;</i> ";
+                        }
+                    }
+                    html +=  "</td>\n" +
                         "        <td>" + evt['data'][i]['organize'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['time_score'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['remark'] + "</td>\n" +
@@ -168,4 +186,10 @@ $(function () {
         titOnClassName: "active"
     })
 });
-checkCookie();
+
+function scoreFollow(id, obj) {
+    playerFollow(id);
+    let elem = $(obj);
+    elem.html("&#xe676;");
+    elem.prop("onclick", null).off("click");
+}

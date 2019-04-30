@@ -25,7 +25,7 @@ var cookie = {
         document.cookie = key + "= ; expires =" + date.toGMTString();//设置cookie
     }
 };
-
+let FollowList = "";
 
 function checkCookie() {
     let id = cookie.get("player_id");
@@ -37,7 +37,11 @@ function checkCookie() {
         $("#nav_right").html("<span class=\"r_nav\">" + "[ <a rel=\"nofollow\" href=\"../message.html\">消息中心<em  class='you_get_message' style='color: #ee5f5b;'></em></a> ]</span><span class=\"pipe\">|</span>" +
             "<span class=\"r_nav\">[ <a rel=\"nofollow\" href=\"../player.html\">个人中心</a> ]</span><span class=\"pipe\">|</span>" +
             "<span class=\"r_nav\">[ <a href=\"javascript:logout();\" rel=\"nofollow\">退出登录</a> ]</span>");
-        return ""
+
+        if (FollowList == "") {
+            doFollowList()
+        }
+        return "";
     }
     id = cookie.get("organize_id");
     name = cookie.get("organize_name");
@@ -95,4 +99,115 @@ function page(page, page_num) {
     }
     pre += fix;
     $(".pagination").html(pre)
+}
+
+
+function playerFollow(id) {
+    $.ajax({
+        url: "http://api.fsh.ink/v1/player/follow",
+        method: "GET",
+        dataType: "json",
+        data: {
+            id: cookie.get("player_id"),
+            token: cookie.get("player_token"),
+            player_id: id
+        },
+        success: function (evt, req, settings) {
+            if (req === "success") {
+                if (evt['message'] === "fail") {
+                    token_timeout();
+                }
+                if (evt['message'] === "OK") {
+                    HiAlert('关注成功', 1000);
+                }
+            } else {
+                HiAlert('ajax fail');
+            }
+        }
+    })
+}
+
+function notFollow(id) {
+    $.ajax({
+        url: "http://api.fsh.ink/v1/player/nope",
+        method: "GET",
+        dataType: "json",
+        data: {
+            id: cookie.get("player_id"),
+            token: cookie.get("player_token"),
+            player_id: id
+        },
+        success: function (evt, req, settings) {
+            if (req === "success") {
+                if (evt['message'] === "fail") {
+                    token_timeout();
+                }
+                if (evt['message'] === "OK") {
+                    HiAlert('取消关注成功', 1000);
+                }
+            } else {
+                HiAlert('ajax fail');
+            }
+        }
+    })
+}
+
+function goChatting(id) {
+    $.ajax({
+        url: "http://api.fsh.ink/v1/player/chatNow",
+        method: "GET",
+        dataType: "json",
+        data: {
+            id: cookie.get("player_id"),
+            token: cookie.get("player_token"),
+            with_id: id
+        },
+        success: function (evt, req, settings) {
+            if (req === "success") {
+                if (evt['message'] === "fail") {
+                    token_timeout();
+                }
+                if (evt['message'] === "OK") {
+                    window.setTimeout("window.location='message.html'", 0);
+                }
+            } else {
+                HiAlert('ajax fail');
+            }
+        }
+    })
+}
+
+function doFollowList() {
+    $.ajax({
+        url: "http://api.fsh.ink/v1/player/followList",
+        method: "GET",
+        dataType: "json",
+        data: {
+            id: cookie.get("player_id"),
+            token: cookie.get("player_token"),
+        },
+        success: function (evt, req, settings) {
+            let html = "";
+            if (req === "success") {
+                if (evt['message'] === "fail") {
+                    token_timeout();
+                }
+                FollowList = [];
+                for (let i = 0; i < evt['data'].length; i++) {
+                    FollowList.push(evt['data'][i]['user_id'])
+                }
+            } else {
+                HiAlert("ajax fail")
+            }
+        }
+    })
+}
+
+function in_array(search, array) {
+    for (let i in array) {
+        if (array[i] == search) {
+            return true;
+        }
+    }
+    return false;
 }

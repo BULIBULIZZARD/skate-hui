@@ -417,3 +417,12 @@ table th {
     bottom: auto;
     right: auto
 }
+
+.icoon {
+    float: right;
+}
+
+.icoon:hover {
+    color: rgb(0, 182, 244);
+    cursor: pointer;
+}

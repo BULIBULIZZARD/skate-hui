@@ -5,6 +5,8 @@ let current_page = 1;
 var myData = [];
 var show_data = [];
 getEchartsData();
+getFollowList();
+getFanList();
 
 /**
  * 弹出层
@@ -66,7 +68,7 @@ function getPlayerScore(p = 1) {
                 if (evt['message'] === "fail") {
                     token_timeout();
                 }
-                html +="<thead>\n" +
+                html += "<thead>\n" +
                     "                    <tr>\n" +
                     "                        <th>项目</th>\n" +
                     "                        <th>组别</th>\n" +
@@ -96,7 +98,7 @@ function getPlayerScore(p = 1) {
                 }
                 $("#myScore").html(html);
                 current_page = evt['page'];
-                page(evt['page'],evt['page_num']);
+                page(evt['page'], evt['page_num']);
                 $("#organize_name").html(evt['data'][0]['organize']);
                 $("#player_name").html(evt['data'][0]['name']);
             } else {
@@ -307,7 +309,6 @@ function pieCount(v) {
     return v['value'].length
 }
 
-
 /**
  *
  * @param id
@@ -316,8 +317,12 @@ function pieCount(v) {
  */
 function OnGroupBtnClick(id, group) {
     $.ajax({
-        url: "http://api.fsh.ink/v1/index/getMatchScore/" + id + "/" + group,
+        url: "http://api.fsh.ink/v1/index/getMatchScore",
         method: "GET",
+        data: {
+            id: id,
+            group: group
+        },
         success: function (evt, req) {
             if (req === "success") {
                 let html = "<table class=\"table table-border table-bg table-bordered table-striped table-hover\">\n" +
@@ -338,7 +343,15 @@ function OnGroupBtnClick(id, group) {
                         "        <td>" + evt['data'][i]['no'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['row_num'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['head_num'] + "</td>\n" +
-                        "        <td>" + evt['data'][i]['name'] + "</td>\n" +
+                        "        <td>" + evt['data'][i]['name'];
+                    if (FollowList != "") {
+                        if (in_array(evt['data'][i]['player_id'], FollowList)) {
+                            html += "<i class=\"icoon Hui-iconfont\" title=\"已关注关注\">&#xe676;</i> ";
+                        } else {
+                            html += "<i class=\"icoon Hui-iconfont\" onclick='scoreFollow(" + evt['data'][i]['player_id'] + ",this)' title=\"加关注\">&#xe60d;</i> ";
+                        }
+                    }
+                    html += "</td>\n" +
                         "        <td>" + evt['data'][i]['organize'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['time_score'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['remark'] + "</td>\n" +
@@ -357,7 +370,104 @@ function OnGroupBtnClick(id, group) {
 
 }
 
-
-function page_func(page){
+function page_func(page) {
     getPlayerScore(page)
+}
+
+function getFollowList() {
+    $.ajax({
+        url: "http://api.fsh.ink/v1/player/followList",
+        method: "GET",
+        dataType: "json",
+        data: {
+            id: cookie.get("player_id"),
+            token: cookie.get("player_token"),
+        },
+        success: function (evt, req, settings) {
+            let html = "";
+            if (req === "success") {
+                if (evt['message'] === "fail") {
+                    token_timeout();
+                }
+                for (let i = 0; i < evt['data'].length; i++) {
+                    html += " <tr class='follow-row' pid='" + evt['data'][i]['user_id'] + "'>\n" +
+                        "                        <td>" + evt['data'][i]['player_name'] + "</td>\n" +
+                        "                        <td>" + evt['data'][i]['organize'] + "</td>\n" +
+                        "                        <td class=\" icooooon\"><i class=\"Hui-iconfont\" onclick='goChatting(" + evt['data'][i]['user_id'] + ")' title=\"发消息\">&#xe6c5;</i> " +
+                        "<i class=\"Hui-iconfont\" onclick='removeFollow(" + evt['data'][i]['user_id'] + ")'  title=\"取消关注\">&#xe6e0;</i>\n" +
+                        "                        </td>\n" +
+                        "                    </tr>"
+                }
+                $("#follow_list").html(html)
+            } else {
+                HiAlert("ajax fail")
+            }
+        }
+    })
+}
+
+function getFanList() {
+    $.ajax({
+        url: "http://api.fsh.ink/v1/player/fanList",
+        method: "GET",
+        dataType: "json",
+        data: {
+            id: cookie.get("player_id"),
+            token: cookie.get("player_token"),
+        },
+        success: function (evt, req, settings) {
+            let html = "";
+            if (req === "success") {
+                if (evt['message'] === "fail") {
+                    token_timeout();
+                }
+                for (let i = 0; i < evt['data'].length; i++) {
+                    html += " <tr class='fan-row' pid='" + evt['data'][i]['fan_id'] + "'>\n" +
+                        "                        <td>" + evt['data'][i]['player_name'] + "</td>\n" +
+                        "                        <td>" + evt['data'][i]['organize'] + "</td>\n" +
+                        "                        <td class=\" icooooon\">";
+                    if (in_array(evt['data'][i]['fan_id'], FollowList)) {
+                        html += "<i class=\"Hui-iconfont\"  title=\"已经关注\">&#xe676;</i> ";
+                    } else {
+                        html += "<i class=\"Hui-iconfont\" onclick='doFollow(" + evt['data'][i]['fan_id'] + ")' title=\"加关注\">&#xe60d;</i> ";
+                    }
+                    html += "<i class=\"Hui-iconfont\" onclick='goChatting(" + evt['data'][i]['fan_id'] + ")'  title=\"发消息\">&#xe6c5;</i>\n" +
+                        "                        </td>\n" +
+                        "                    </tr>"
+                }
+                $("#fans_list").html(html)
+            } else {
+                HiAlert("ajax fail")
+            }
+        }
+    })
+}
+
+function removeFollow(id) {
+    $(".follow-row").each(function () {
+        if ($(this).attr("pid") == id) {
+            notFollow(id);
+            this.remove();
+            return false
+        }
+    })
+}
+
+function doFollow(id) {
+    FollowList.push(id);
+    $(".fan-row").each(function () {
+        if ($(this).attr("pid") == id) {
+            let elem = $($(this).find(".Hui-iconfont").get(0));
+            elem.html("&#xe676");
+            elem.prop("onclick", null).off("click");
+            playerFollow(id);
+        }
+    });
+}
+
+function scoreFollow(id, obj) {
+    playerFollow(id);
+    let elem = $(obj);
+    elem.html("&#xe676;");
+    elem.prop("onclick", null).off("click");
 }
