@@ -1,4 +1,3 @@
-
 var current_chat_id = 0;
 checkCookie();
 checkToken();
@@ -17,7 +16,7 @@ function bindChatLeftEvent() {
     chat_end.off();
     chat_name.on("click", function () {
         $(".chat-select").removeClass("chat-select");
-        $(this).find(".new_mark").remove();
+        $(this).find(".Hui-iconfont").removeClass("Hui-iconfont-xiaoxi");
         $(this).addClass("chat-select");
         current_chat_id = $(this).attr("chat_id");
         let mark = current_chat_id;
@@ -111,7 +110,7 @@ function getChatting() {
                     token_timeout();
                 }
                 let html = "";
-                let is_new = "<b class=\"new_mark\" style=\"color: #ff0000\">●</b>";
+                let is_new = "  <i class=\"Hui-iconfont Hui-iconfont-xiaoxi\" style='color: #FFC600'></i>";
                 for (let i = 0; i < evt['data'].length; i++) {
                     html += "<div class=\"chat_name\" chat_id = " + evt['data'][i]['with_id'] + ">\n" +
                         "            <p class=\"chat_organize_name\">\n" +
@@ -119,9 +118,11 @@ function getChatting() {
                         "            </p>\n" +
                         "            <p class=\"chat_player_name\">\n" +
                         "                <b class=\"chat_end\">x</b>\n" +
-                        "                " + evt['data'][i]['player_name']
-                    if (evt['data'][i]['is_new'] === 1) html += is_new;
-                    html += "            </p>\n" +
+                        "                " + evt['data'][i]['player_name'] +
+                        "  <i class=\"Hui-iconfont ";
+                    if (evt['data'][i]['is_new'] === 1) html += "Hui-iconfont-xiaoxi";
+                    html += "\" style='color: #FFC600'></i>" +
+                        "            </p>\n" +
                         "        </div>";
                 }
                 let chat_left = $("#chat-left").html(html);
@@ -130,7 +131,7 @@ function getChatting() {
                 firstChatting.addClass("chat-select");
                 current_chat_id = firstChatting.attr("chat_id");
                 let mark = current_chat_id;
-                firstChatting.find(".new_mark").remove();
+                firstChatting.find(".Hui-iconfont").removeClass("Hui-iconfont-xiaoxi");
                 bindChatLeftEvent();
                 filterChatLog();
                 clickNewStatusChatting(mark);
@@ -206,12 +207,11 @@ function getMessage(message, from_id) {
 
 function isNewStatus(from_id) {
     let chat_name = $(".chat_name");
-    let is_new = "<b class=\"new_mark\" style=\"color: #ff0000\">●</b>";
     let flag = 0;
     chat_name.each(function () {
         if ($(this).attr("chat_id") == from_id) {
             console.log("searched");
-            $(this).find(".chat_player_name").append(is_new);
+            $(this).find(".Hui-iconfont").addClass("Hui-iconfont-xiaoxi");
             flag = 1;
             return false;
         }
@@ -260,7 +260,7 @@ function getNewChatName(with_id) {
                     "            <p class=\"chat_player_name\">\n" +
                     "                <b class=\"chat_end\">x</b>\n" +
                     "                " + evt['data']['player_name'] +
-                    "<b class=\"new_mark\" style=\"color: #ff0000\">●</b>" +
+                    "  <i class=\"Hui-iconfont Hui-iconfont-xiaoxi\" style='color: #FFC600'></i>" +
                     "            </p>\n" +
                     "        </div>";
                 $("#chat-left").prepend(html);

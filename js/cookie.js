@@ -74,8 +74,8 @@ function token_timeout() {
 }
 
 function page(page, page_num) {
-    let pre = "<a onclick='page_func(" + (current_page - 1) + ")'><</a>";
-    let fix = "<a onclick='page_func(" + (current_page + 1) + ")'>></a>";
+    let pre = "<a onclick='page_func(" + (current_page - 1) + ")'><i class=\"Hui-iconfont\">&#xe6d4;</i></a>";
+    let fix = "<a onclick='page_func(" + (current_page + 1) + ")'><i class=\"Hui-iconfont\">&#xe6d7;</i></a>";
     let min = 1;
     let max = page_num;
     if (page > 6) {
