@@ -231,7 +231,7 @@ function sendMessage() {
         return false;
     }
 
-    let msg = unhtml(text_area.val());
+    let msg = unHtml(text_area.val());
     console.log(msg);
     websocket_client.send("{\"from\":\"" + cookie.get("player_id") + "\",\"msg\":\"" + msg+ "\",\"to\":\"" + current_chat_id + "\"}");
     let html = "<div class=\"chat_massage_send enable_show\" chat_id =\"" + current_chat_id + "\" ><p>" + msg + "</p><div class=\"show_time_send \">" + formatDate(new Date()) + "</div></div>";
@@ -353,7 +353,7 @@ function formatDate(now) {
     return year + "-" + month + "-" + date + " " + hour + ":" + minute + ":" + second;
 }
 
-function unhtml(str) {
+function unHtml(str) {
     return str ? str.replace(/[<">']/g, (a) => {
         return {
             '<': '&lt;',
