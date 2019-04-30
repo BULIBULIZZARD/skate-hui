@@ -36,7 +36,7 @@ function checkCookie() {
         $("#nav_left").html("<a href='../index.html'>" + name + ", 欢迎访问</a>");
         $("#nav_right").html("<span class=\"r_nav\">" + "[ <a rel=\"nofollow\" href=\"../message.html\">消息中心<em  class='you_get_message' style='color: #ee5f5b;'></em></a> ]</span><span class=\"pipe\">|</span>" +
             "<span class=\"r_nav\">[ <a rel=\"nofollow\" href=\"../player.html\">个人中心</a> ]</span><span class=\"pipe\">|</span>" +
-            "<span class=\"r_nav\">[ <a href=\"javascript:logout();\" rel=\"nofollow\">退出登陆</a> ]</span>");
+            "<span class=\"r_nav\">[ <a href=\"javascript:logout();\" rel=\"nofollow\">退出登录</a> ]</span>");
         return ""
     }
     id = cookie.get("organize_id");
@@ -46,11 +46,11 @@ function checkCookie() {
         $("#nav_left").html("<a href='../index.html'>" + name + ", 欢迎访问</a>");
         $("#nav_right").html("<span class=\"r_nav\">[ <a rel=\"nofollow\" " +
             "href=\"../organize.html\">组织主页</a> ]</span><span class=\"pipe\">|</span>" +
-            "<span class=\"r_nav\">[ <a href=\"javascript:logout();\" rel=\"nofollow\">退出登陆</a> ]</span>")
+            "<span class=\"r_nav\">[ <a href=\"javascript:logout();\" rel=\"nofollow\">退出登录</a> ]</span>")
     } else {
         $("#nav_left").html("<a href='../index.html'>您好, 欢迎访问</a>");
         $("#nav_right").html("<span class=\"r_nav\">[ <a rel=\"nofollow\" " +
-            "href=\"../login.html\">登陆</a> ]</span>");
+            "href=\"../login.html\">登录</a> ]</span>");
     }
 }
 
@@ -69,7 +69,7 @@ function token_timeout() {
     cookie.delete("player_id");
     cookie.delete("player_name");
     cookie.delete("player_token");
-    HiAlert("令牌过期请重新登陆");
+    HiAlert("令牌过期请重新登录");
     window.setTimeout("window.location='index.html'", 2000);
 }
 
