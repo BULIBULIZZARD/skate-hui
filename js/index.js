@@ -191,5 +191,6 @@ function scoreFollow(id, obj) {
     playerFollow(id);
     let elem = $(obj);
     elem.html("&#xe676;");
+    elem.attr("title","已关注");
     elem.prop("onclick", null).off("click");
 }

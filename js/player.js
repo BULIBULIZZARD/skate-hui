@@ -459,6 +459,7 @@ function doFollow(id) {
         if ($(this).attr("pid") == id) {
             let elem = $($(this).find(".Hui-iconfont").get(0));
             elem.html("&#xe676");
+            elem.attr("title","已关注");
             elem.prop("onclick", null).off("click");
             playerFollow(id);
         }
@@ -469,5 +470,6 @@ function scoreFollow(id, obj) {
     playerFollow(id);
     let elem = $(obj);
     elem.html("&#xe676;");
+    elem.attr("title","已关注");
     elem.prop("onclick", null).off("click");
 }
