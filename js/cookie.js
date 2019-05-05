@@ -83,7 +83,7 @@ function page(page, page_num) {
     let min = 1;
     let max = page_num;
     if (page > 6) {
-        pre += "<a onclick='page_func(" + (page - 6) + ")'>...</a>"
+        pre += "<a onclick='page_func(" + (page - 6) + ")'>...</a>";
         min = page - 5;
     }
     if (page + 6 < page_num) {
@@ -92,7 +92,7 @@ function page(page, page_num) {
     }
     for (let i = min; i <= max; i++) {
         if (i == page) {
-            pre += "<a class = \"page_select\" onclick='page_func(" + i + ")'>" + i + "</a>"
+            pre += "<a class = \"page_select\" onclick='page_func(" + i + ")'>" + i + "</a>";
             continue;
         }
         pre += "<a onclick='page_func(" + i + ")'>" + i + "</a>"
@@ -211,3 +211,16 @@ function in_array(search, array) {
     }
     return false;
 }
+
+function GetRequest() {
+    let url = location.search; //获取url中"?"符后的字串
+    let theRequest = new Object();
+    if (url.indexOf("?") != -1) {
+        let str = url.substr(1);
+        let params = str.split("&");
+        for(let i = 0; i < params.length; i ++) {
+            theRequest[params[i].split("=")[0]]=decodeURI(params[i].split("=")[1]);
+        }
+    }
+    return theRequest;
+} 

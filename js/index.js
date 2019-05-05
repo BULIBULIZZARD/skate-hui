@@ -1,5 +1,8 @@
 getContest();
 checkCookie();
+let current_page = 1;
+getArticleList(current_page);
+
 
 function getContest() {
     $.ajax(
@@ -27,7 +30,6 @@ function getContest() {
         }
     );
 }
-
 
 function showMatch(obj, obj_c, speed, obj_type, Event) {
     $(obj).on(Event, function () {
@@ -142,7 +144,7 @@ function OnGroupBtnClick(id, group) {
                         "        <td>" + evt['data'][i]['no'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['row_num'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['head_num'] + "</td>\n" +
-                        "        <td>" + evt['data'][i]['name'] ;
+                        "        <td>" + evt['data'][i]['name'];
                     if (FollowList != "") {
                         if (in_array(evt['data'][i]['player_id'], FollowList)) {
                             html += "<i class=\"icoon Hui-iconfont\" title=\"已关注关注\">&#xe676;</i> ";
@@ -150,7 +152,7 @@ function OnGroupBtnClick(id, group) {
                             html += "<i class=\"icoon Hui-iconfont\" onclick='scoreFollow(" + evt['data'][i]['player_id'] + ",this)' title=\"加关注\">&#xe60d;</i> ";
                         }
                     }
-                    html +=  "</td>\n" +
+                    html += "</td>\n" +
                         "        <td>" + evt['data'][i]['organize'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['time_score'] + "</td>\n" +
                         "        <td>" + evt['data'][i]['remark'] + "</td>\n" +
@@ -165,7 +167,6 @@ function OnGroupBtnClick(id, group) {
             }
         }
     })
-
 }
 
 HiAlert = function (string, time = 2000) {
@@ -191,6 +192,32 @@ function scoreFollow(id, obj) {
     playerFollow(id);
     let elem = $(obj);
     elem.html("&#xe676;");
-    elem.attr("title","已关注");
+    elem.attr("title", "已关注");
     elem.prop("onclick", null).off("click");
+}
+
+function getArticleList(p = 1) {
+    $.ajax({
+        url: "http://api.fsh.ink/v1/article/list",
+        method: "GET",
+        data: {
+            page: p,
+        },
+        success: function (evt, req) {
+            if (req === "success") {
+                console.log(evt);
+                let html = '';
+                for (let i = 0; i < evt['data'].length; i++) {
+                    html += "<li><a href = \"article.html?id=" + evt['data'][i]['id'] + "\">"+evt['data'][i]['title']+"</a></li>"
+                }
+                $("#article ul").html(html);
+                current_page = evt['page'];
+                page(evt['page'],evt['page_num'])
+            }
+        }
+    })
+}
+
+function page_func(page) {
+    getArticleList(page)
 }

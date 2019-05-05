@@ -359,10 +359,6 @@ table th {
 }
 
 
-
-
-
-
 #slider-1 {
     width: 100%;
     text-align: center;
@@ -426,3 +422,53 @@ table th {
     color: rgb(0, 182, 244);
     cursor: pointer;
 }
+
+#Huifold1 {
+    width: 80%;
+    float: left;
+}
+
+#article {
+    width: 18%;
+    float: right;
+    min-height: 350px;
+    margin-top: 20px;
+    border: solid 2px #ddd;
+    border-radius: 5px;
+    padding-bottom: 10px;
+}
+
+
+
+#article p {
+    font-size: 16px;
+    padding: 5px;
+    height: 30px;
+    background: #eeeeee;
+}
+
+#article div {
+    padding: 5px;
+    background: #ffffff;
+}
+#article ul{
+    height: 300px;
+}
+#article li {
+    display: block;
+    padding:0 5px 0 5px;
+    font-size: 14px;
+    height: 20px;
+    line-height: 16px;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -o-text-overflow: ellipsis;
+}
+
+#article li a:hover{
+    color: #ff8800;
+    text-decoration: none;
+}
+
