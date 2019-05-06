@@ -192,6 +192,7 @@ $(function () {
 
 function scoreFollow(id, obj) {
     playerFollow(id);
+    FollowList.push(id);
     let elem = $(obj);
     elem.html("&#xe676;");
     elem.attr("title", "已关注");

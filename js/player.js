@@ -480,4 +480,5 @@ function scoreFollow(id, obj) {
     elem.html("&#xe676;");
     elem.attr("title","已关注");
     elem.prop("onclick", null).off("click");
+    doFollow(id)
 }
