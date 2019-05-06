@@ -208,7 +208,7 @@ function getArticleList(p = 1) {
                 console.log(evt);
                 let html = '';
                 for (let i = 0; i < evt['data'].length; i++) {
-                    html += "<li><a href = \"article.html?id=" + evt['data'][i]['id'] + "\">"+evt['data'][i]['title']+"</a></li>"
+                    html += "<li><a href = \"article.html?id=" + evt['data'][i]['id'] + "\" title='"+evt['data'][i]['title']+"'>"+evt['data'][i]['title']+"</a></li>"
                 }
                 $("#article ul").html(html);
                 current_page = evt['page'];

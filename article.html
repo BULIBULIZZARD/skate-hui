@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="H-ui/lib/html5shiv.js"></script>
+    <script type="text/javascript" src="H-ui/lib/respond.min.js"></script>
+    <script type="text/javascript" src="H-ui/lib/jquery/1.9.1/jquery.js"></script>
+    <script type="text/javascript" src="H-ui/static/h-ui/js/H-ui.js"></script>
+    <script type="text/javascript" src="H-ui/lib/jquery.SuperSlide/2.1.1/jquery.SuperSlide.min.js"></script>
+    <script type="text/javascript" src="js/cookie.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="H-ui/static/h-ui/css/H-ui.min.css"/>
+    <link rel="stylesheet" type="text/css" href="H-ui/lib/Hui-iconfont/1.0.8/iconfont.min.css"/>
+    <title>文章详情</title>
+</head>
+
+<style>
+    #article {
+        margin: auto;
+        width: 80%;
+    }
+
+    #article h1 {
+        text-align: center;
+    }
+
+    #content {
+        text-indent: 25px;
+        font-size: 14px;
+        padding: 20px 0 40px 0;
+    }
+</style>
+
+<div class="topnav">
+    <div class="wp cl">
+        <div class="wp cl">
+            <div class="l" id="nav_left"></div>
+            <div class="r" id="nav_right"></div>
+        </div>
+    </div>
+</div>
+<body>
+<div id="article">
+    <h1>
+    </h1>
+    <div id="content">
+    </div>
+</div>
+</body>
+
+<script>
+    checkCookie();
+    getContent();
+
+    function getContent() {
+        let params = GetRequest();
+        if (params['id'] == 'undefined') params['id'] = 1;
+        $.ajax({
+            url: "http://api.fsh.ink/v1/article/content",
+            method: "GET",
+            dataType: "json",
+            data: {
+                id: params['id']
+            },
+            success: function (evt, req, settings) {
+                if (req === "success") {
+                    if (evt['message'] === "fail") {
+                        token_timeout();
+                    }
+                    $("#article h1").html(evt['data']['title']+"<small>"+formatDate(new Date(evt['data']['create_time'] * 1000))+"</small>")
+                    $("#content").html(evt['data']['content']);
+                } else {
+                    HiAlert('ajax fail');
+                }
+            }
+        })
+    }
+</script>
+</html>

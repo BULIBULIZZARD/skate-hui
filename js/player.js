@@ -448,6 +448,11 @@ function removeFollow(id) {
         if ($(this).attr("pid") == id) {
             notFollow(id);
             this.remove();
+            for(let i=0;i<FollowList.length;i++){
+                if (FollowList[i] == id){
+                    FollowList[i] = '0';
+                }
+            }
             return false
         }
     })
