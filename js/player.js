@@ -348,7 +348,7 @@ function OnGroupBtnClick(id, group) {
                         if (in_array(evt['data'][i]['player_id'], FollowList)) {
                             html += "<i class=\"icoon Hui-iconfont\" title=\"已关注关注\">&#xe676;</i> ";
                         } else {
-                            if(evt['data'][i]['player_id'] != cookie.get("player_id")){
+                            if (evt['data'][i]['player_id'] != cookie.get("player_id")) {
                                 html += "<i class=\"icoon Hui-iconfont\" onclick='scoreFollow(" + evt['data'][i]['player_id'] + ",this)' title=\"加关注\">&#xe60d;</i> ";
                             }
 
@@ -451,8 +451,8 @@ function removeFollow(id) {
         if ($(this).attr("pid") == id) {
             notFollow(id);
             this.remove();
-            for(let i=0;i<FollowList.length;i++){
-                if (FollowList[i] == id){
+            for (let i = 0; i < FollowList.length; i++) {
+                if (FollowList[i] == id) {
                     FollowList[i] = '0';
                 }
             }
@@ -467,18 +467,51 @@ function doFollow(id) {
         if ($(this).attr("pid") == id) {
             let elem = $($(this).find(".Hui-iconfont").get(0));
             elem.html("&#xe676");
-            elem.attr("title","已关注");
+            elem.attr("title", "已关注");
             elem.prop("onclick", null).off("click");
             playerFollow(id);
+            return false;
         }
     });
+    addFollowList(id);
+}
+
+function addFollowList(id) {
+    $.ajax({
+        url: "http://api.fsh.ink/v1/player/getChatName",
+        method: "GET",
+        dataType: "json",
+        data: {
+            id: cookie.get("player_id"),
+            token: cookie.get("player_token"),
+            with_id: id,
+        },
+        success: function (evt, req, settings) {
+            let html = "";
+            if (req === "success") {
+                if (evt['message'] === "fail") {
+                    token_timeout();
+                }
+                html = " <tr class='follow-row' pid='" + id + "'>\n" +
+                    "                        <td>" + evt['data']['player_name'] + "</td>\n" +
+                    "                        <td>" + evt['data']['organize'] + "</td>\n" +
+                    "                        <td class=\" icooooon\"><i class=\"Hui-iconfont\" onclick='goChatting(" + id + ")' title=\"发消息\">&#xe6c5;</i> " +
+                    "<i class=\"Hui-iconfont\" onclick='removeFollow(" + id + ")'  title=\"取消关注\">&#xe6e0;</i>\n" +
+                    "                        </td>\n" +
+                    "                    </tr>";
+                $("#follow_list").prepend(html)
+            } else {
+                HiAlert("ajax fail")
+            }
+        }
+    })
 }
 
 function scoreFollow(id, obj) {
     playerFollow(id);
     let elem = $(obj);
     elem.html("&#xe676;");
-    elem.attr("title","已关注");
+    elem.attr("title", "已关注");
     elem.prop("onclick", null).off("click");
     doFollow(id)
 }
