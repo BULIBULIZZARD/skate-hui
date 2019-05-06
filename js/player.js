@@ -348,7 +348,10 @@ function OnGroupBtnClick(id, group) {
                         if (in_array(evt['data'][i]['player_id'], FollowList)) {
                             html += "<i class=\"icoon Hui-iconfont\" title=\"已关注关注\">&#xe676;</i> ";
                         } else {
-                            html += "<i class=\"icoon Hui-iconfont\" onclick='scoreFollow(" + evt['data'][i]['player_id'] + ",this)' title=\"加关注\">&#xe60d;</i> ";
+                            if(evt['data'][i]['player_id'] != cookie.get("player_id")){
+                                html += "<i class=\"icoon Hui-iconfont\" onclick='scoreFollow(" + evt['data'][i]['player_id'] + ",this)' title=\"加关注\">&#xe60d;</i> ";
+                            }
+
                         }
                     }
                     html += "</td>\n" +
