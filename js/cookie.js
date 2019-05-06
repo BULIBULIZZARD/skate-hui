@@ -192,7 +192,7 @@ function doFollowList() {
                 if (evt['message'] === "fail") {
                     token_timeout();
                 }
-                FollowList = [];
+                FollowList = ['0'];
                 for (let i = 0; i < evt['data'].length; i++) {
                     FollowList.push(evt['data'][i]['user_id'])
                 }
