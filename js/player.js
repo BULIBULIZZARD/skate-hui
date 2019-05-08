@@ -515,3 +515,35 @@ function scoreFollow(id, obj) {
     elem.prop("onclick", null).off("click");
     doFollow(id)
 }
+
+function changePSW() {
+    let ord_psw = $("#ord_psw");
+    let new_psw = $("#new_psw");
+    let re_psw = $("#re_psw");
+    $.ajax({
+        url: "http://api.fsh.ink/v1/player/changePassword",
+        method: "POST",
+        dataType: "json",
+        data: {
+            id: cookie.get("player_id"),
+            token: cookie.get("player_token"),
+            ord: ord_psw.val(),
+            new: new_psw.val(),
+            re: re_psw.val(),
+        },
+        success: function (evt, req, settings) {
+            if (req === "success") {
+                if (evt['message'] === "fail") {
+                    token_timeout();
+                    return ''
+                }
+                HiAlert(evt['message']);
+                ord_psw.val('');
+                new_psw.val('');
+                re_psw.val('');
+            } else {
+                HiAlert("ajax fail")
+            }
+        }
+    })
+}

@@ -73,6 +73,9 @@ function token_timeout() {
     cookie.delete("player_id");
     cookie.delete("player_name");
     cookie.delete("player_token");
+    cookie.delete("organize_id");
+    cookie.delete("organize_name");
+    cookie.delete("organize_token");
     HiAlert("令牌过期请重新登录");
     window.setTimeout("window.location='index.html'", 2000);
 }

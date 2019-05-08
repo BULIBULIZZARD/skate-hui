@@ -372,3 +372,35 @@ HiAlert = function (string, time = 2000) {
 function page_func(page) {
     getOrganizeScore(page, player_id, match_name)
 }
+
+function changePSW() {
+    let ord_psw = $("#ord_psw");
+    let new_psw = $("#new_psw");
+    let re_psw = $("#re_psw");
+    $.ajax({
+        url: "http://api.fsh.ink/v1/organize/changePassword",
+        method: "POST",
+        dataType: "json",
+        data: {
+            id: cookie.get("organize_id"),
+            token: cookie.get("organize_token"),
+            ord: ord_psw.val(),
+            new: new_psw.val(),
+            re: re_psw.val(),
+        },
+        success: function (evt, req, settings) {
+            if (req === "success") {
+                if (evt['message'] === "fail") {
+                    token_timeout();
+                    return ''
+                }
+                HiAlert(evt['message']);
+                ord_psw.val('');
+                new_psw.val('');
+                re_psw.val('');
+            } else {
+                HiAlert("ajax fail")
+            }
+        }
+    })
+}

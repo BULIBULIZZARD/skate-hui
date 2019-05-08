@@ -472,3 +472,13 @@ table th {
     text-decoration: none;
 }
 
+.pws_text{
+    width: 40%;
+}
+
+.psw_label{
+    width: 100%;
+    text-align: left;
+    margin-top: 10px;
+    display: inline-block;
+}
