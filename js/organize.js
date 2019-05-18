@@ -1,9 +1,9 @@
 $("#organize_name").html(cookie.get("organize_name"));
 let current_page = 1;
 checkCookie();
-//todo 分页
 getOrganizeScore();
 getOrganizeBestScore();
+getAllPlayer();
 getEchartsTreeData();
 getEchartsPieData();
 let player_id = "";
@@ -118,6 +118,40 @@ function getOrganizeBestScore() {
         }
     })
 
+}
+
+
+function getAllPlayer() {
+    let id = cookie.get("organize_id");
+    $.ajax({
+        url: "http://api.fsh.ink/v1/organize/getAllPlayer",
+        method: "GET",
+        dataType: "json",
+        data: {
+            id: id,
+            token: cookie.get("organize_token"),
+        },
+        success: function (evt, req, settings) {
+            let html = "";
+            if (req === "success") {
+                if (evt['message'] === "fail") {
+                    token_timeout();
+                }
+                for (let i = 0; i < evt['data'].length; i++) {
+                    html +="<tr>"+
+                        "        <td>" + evt['data'][i]['player_name'] + "</td>\n" +
+                        "        <td>" + evt['data'][i]['username'] + "</td>\n" +
+                        "    </tr>\n";
+                }
+                if (evt['data'].length === 0) {
+                    html += "        <tr><td colspan='2' style='text-align: center'>暂无数据</td></tr>\n"
+                }
+                $("#myPlayer").append(html);
+            } else {
+                HiAlert("ajax fail")
+            }
+        }
+    })
 }
 
 /**
