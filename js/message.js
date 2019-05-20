@@ -237,6 +237,7 @@ function sendMessage() {
     let html = "<div class=\"chat_massage_send enable_show\" chat_id =\"" + current_chat_id + "\" ><p>" + msg + "</p><div class=\"show_time_send \">" + formatDate(new Date()) + "</div></div>";
     $("#chat-show-message").append(html);
     filterChatLog();
+    text_area.val('');
 }
 
 function getNewChatName(with_id) {
